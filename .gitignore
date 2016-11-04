@@ -1,0 +1,4 @@
+/lib/**/*.js
+/js/index.js
+/main.js
+/node_modules

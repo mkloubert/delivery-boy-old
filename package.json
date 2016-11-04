@@ -1,0 +1,25 @@
+{
+  "name": "delivery-boy",
+  "version": "1.0.0",
+  "description": "Secure music file sharing application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": "https://github.com/mkloubert/delivery-boy",
+  "keywords": [
+    "delivery",
+    "boy",
+    "music",
+    "file",
+    "share"
+  ],
+  "author": "mkloubert",
+  "license": "GPL3",
+  "devDependencies": {
+    "@types/electron": "^1.4.25",
+    "@types/jquery": "^2.0.33",
+    "@types/node": "^6.0.46",
+    "electron": "^1.4.5"
+  }
+}
