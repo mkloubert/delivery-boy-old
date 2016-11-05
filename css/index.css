@@ -1,0 +1,95 @@
+body {
+    display: table;
+}
+
+#dboy-content-wrapper {
+    display: table-row-group;
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+}
+
+#dboy-content-wrapper .dboy-content {
+    background: #000;
+    display: table-row;
+    overflow: hidden;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas {
+    display: table;
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-area {
+    display: table-cell;
+    overflow: hidden;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-area .dboy-content {
+    background-color: transparent;
+    display: table;
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-area .dboy-content .dboy-row {
+    display: table-row;
+    overflow: hidden;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-left {
+    background-color: #333333;
+    width: 50px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-left .dboy-menuarea {
+    display: table;
+    overflow: hidden;
+    width: 100%;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-left .dboy-menuarea .dboy-icon {
+    color: #9e9e9e;
+    display: table-row;
+    cursor: pointer;
+    font-size: 24px;
+    height: 50px;
+    overflow: hidden;
+    text-align: center;
+    vertical-align: middle;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-left .dboy-menuarea .dboy-icon:hover,
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-left .dboy-menuarea .dboy-icon.dboy-selected {
+    color: #fff;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-left .dboy-menuarea .dboy-icon i.fa {
+    padding-top: 21px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle {
+    background-color: #252526;
+    width: 224px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-right {
+    background-color: #1e1e1e;
+}
+
+#dboy-content-wrapper .dboy-statusbar {
+    background: #007acc;
+    color: #fff;
+    display: table-row;
+    height: 24px;
+    overflow: hidden;
+}
+
+#dboy-content-wrapper > div.dboy-content > div > div.dboy-area.dboy-middle > div,
+#dboy-content-wrapper > div.dboy-content > div > div.dboy-area.dboy-right > div {
+    position: relative;
+    top: -29px;
+}

@@ -1,4 +1,8 @@
 /lib/**/*.js
+/lib/**/*.map
 /js/index.js
 /main.js
 /node_modules
+/*.map
+/js/*.map
+/pushall.sh

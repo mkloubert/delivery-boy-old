@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app>
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -8,10 +8,13 @@
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
     <title>Delivery Boy</title>
 
-    <!-- Bootstrap -->
-    <link href="./css/bootstrap.css" rel="stylesheet">
     <!-- FontAwesome -->
     <link href="./css/font-awesome.css" rel="stylesheet">
+
+    <!-- jQuery UI -->
+    <link href="./css/jquery-ui.css" rel="stylesheet">
+    <link href="./css/jquery-ui.structure.css" rel="stylesheet">
+    <link href="./css/jquery-ui.theme.css" rel="stylesheet">
 
     <link href="./css/styles.css" rel="stylesheet">
     <link href="./css/index.css" rel="stylesheet">
@@ -21,13 +24,65 @@
       let jQuery = require('./js/jquery.js');
       let $ = jQuery;
     </script>
-
-    <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="./js/bootstrap.js"></script>
+    <!-- jQuery UI -->
+    <script src="./js/jquery-ui.js"></script>
 
     <script src="./js/index.js"></script>
   </head>
 
   <body>
+      <div id="dboy-content-wrapper">
+        <div class="dboy-content">
+          <div class="dboy-areas">
+            <div class="dboy-area dboy-left">
+              <div class="dboy-content">
+                <div class="dboy-menuarea">
+                  <div class="dboy-icon dboy-downloads-btn">
+                    <i class="fa fa-cloud" aria-hidden="true"></i>
+                  </div>
+
+                  <div class="dboy-icon dboy-search-btn">
+                    	<i class="fa fa-search" aria-hidden="true"></i>
+                  </div>
+
+                  <div class="dboy-icon dboy-settings-btn">
+                    <i class="fa fa-cogs" aria-hidden="true"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="dboy-area dboy-middle">
+              <div class="dboy-content">
+                <div class="dboy-row dboy-down-upload">Downloads</div>
+
+                <div class="dboy-row dboy-search">Search</div>
+
+                <div class="dboy-row dboy-settings">Settings</div>
+              </div>
+            </div>
+
+            <div class="dboy-area dboy-right">
+              <div class="dboy-content">
+                <div class="dboy-row dboy-downloads">Downloads</div>
+
+                <div class="dboy-row dboy-search">Search</div>
+
+                <div class="dboy-row dboy-settings">Settings</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dboy-statusbar">B</div>
+      </div>
+
+      <script>
+        jQuery(function() {
+          $DBoy.init();
+          $DBoy.run();
+        });
+      </script>
+    </div>
   </body>
 </html>

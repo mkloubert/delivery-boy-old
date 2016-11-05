@@ -1,8 +1,13 @@
 {
     "compilerOptions": {
         "target": "es5",
-        "removeComments": true,
         "module": "commonjs",
+        "moduleResolution": "node",
+        "sourceMap": false,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "removeComments": true,
+        "noImplicitAny": true,
         "watch": true
     }
 }
