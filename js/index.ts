@@ -21,7 +21,6 @@
 import * as DeliveryBoy from '../lib/index';
 import * as Electron from 'electron';
 
-let client: DeliveryBoy.Client = Electron.remote.getGlobal("sharedObj").client;
 let mainWindow: Electron.BrowserWindow = Electron.remote.getGlobal("sharedObj").window;
 
 const DBOY_CLASS_SELECTED = 'dboy-selected';
@@ -31,9 +30,9 @@ const DBOY_CLASS_SELECTED = 'dboy-selected';
  */
 enum DeliveryBoyMenuButton {
     /**
-     * Download button
+     * Transfer button
      */
-    Downloads,
+    Transfers,
 
     /**
      * Search button
@@ -50,25 +49,26 @@ enum DeliveryBoyMenuButton {
  * Handles the app.
  */
 class DeliveryBoyApp {
+    protected _client: DeliveryBoy.Client;
     /**
      * Stores the selected button in the left menu bar.
      */
-    protected _selectedButton = DeliveryBoyMenuButton.Downloads;
+    protected _selectedButton = DeliveryBoyMenuButton.Transfers;
 
     /**
-     * Gets the selector of the 'download' button in the left menu bar. 
+     * Initializes a new instance of that class.
+     * 
+     * @param {DeliveryBoy.Client} client The underlying client.
      */
-    public get downloadsButton(): JQuery {
-        return this.menuBarIcons
-                   .find('.dboy-downloads-btn');
+    constructor(client: DeliveryBoy.Client) {
+        this._client = client;
     }
 
     /**
-     * Gets the content area of the "DOWNLOAD area" inside the right area.
+     * Gets the underlying client.
      */
-    public get downUploadArea(): JQuery {
-        return this.rightArea
-                   .find('.dboy-down-upload');
+    public get client(): DeliveryBoy.Client {
+        return this._client;
     }
 
     /**
@@ -77,8 +77,8 @@ class DeliveryBoyApp {
     public init() {
         let me = this;
 
-        this.downloadsButton.click(() => {
-            me.selectedButton = DeliveryBoyMenuButton.Downloads;
+        this.transferButton.click(() => {
+            me.selectedButton = DeliveryBoyMenuButton.Transfers;
         });
 
         this.searchButton.click(() => {
@@ -89,12 +89,15 @@ class DeliveryBoyApp {
             me.selectedButton = DeliveryBoyMenuButton.Settings;
         });
 
+        //TODO: implement
+        /*
         this.middleArea.resizable({
             handles: 'e',
             stop: (event, ui) => {
                 //TODO
             }
         });
+        */
     }
 
     /**
@@ -119,10 +122,131 @@ class DeliveryBoyApp {
     }
 
     /**
+     * Reloads the download list.
+     */
+    protected reloadDownloadList() {
+        let me = this;
+
+        let itemList = me.middleArea.find('.dboy-transfer .dboy-items');
+        itemList.html('<p>Loading list...</p>');
+
+        let toHumanReadableSize = (size: number): string => {
+            let x = Math.floor(Math.log(size) / Math.log(1000));
+
+            const SIZE_UNITS: string[] = [
+                '',
+                'KB',
+                'MB',
+                'GB',
+                'TB',
+                'PB',
+                'EB',
+            ];
+
+            let unitIndex = x;
+            if (unitIndex >= SIZE_UNITS.length) {
+                unitIndex = SIZE_UNITS.length - 1;
+            }
+
+            let hrSize = size / Math.pow(1000, x);
+
+            return ('' + hrSize.toFixed(2) + ' ' + SIZE_UNITS[unitIndex]).trim();
+        };
+
+        this.client.requestDownloadList().then(
+            (list: DeliveryBoy.DownloadList) => {
+                itemList.html('');
+
+                if (list.downloads.length > 0) {
+                    let createOnPropertyChangedCallback = (item: JQuery, dl: DeliveryBoy.DownloadItem): (sender: any, args: DeliveryBoy.PropertyChangedEventArguments) => void => {
+                        return (sender: DeliveryBoy.DownloadItem, args: DeliveryBoy.PropertyChangedEventArguments) => {
+                            let progressBar = item.find('.dboy-progress .dboy-progress-bar');
+                            let sourceCount = item.find('.dboy-file .dboy-sources .dboy-value');
+
+                            switch (args.propertyName) {
+                                case 'sources':
+                                    sourceCount.text(sender.sources);
+                                    break;
+
+                                case 'totalBytesReceived':
+                                    let progress = 1;
+                                    if (sender.size > 0) {
+                                        progress = sender.totalBytesReceived / sender.size;
+                                    }
+
+                                    progressBar.animate({
+                                        width: Math.ceil(progress * 100.0) + '%',
+                                    }, 500);
+                                    break;
+                            }
+                        };
+                    };
+
+                    for (let i = 0; i < list.downloads.length; i++) {
+                        let dl = list.downloads[i];
+
+                        let item = $('<div class="dboy-item"></div>');
+
+                        let file = $('<div class="dboy-file"></div>');
+                        {
+                            // file name
+                            let fileName = $('<div class="dboy-name"></div>');
+                            fileName.attr('title', dl.fileName);
+                            fileName.text(dl.fileName);
+                            fileName.appendTo(file);
+
+                            // file size
+                            let fileSize = $('<div class="dboy-size"></div>');
+                            fileSize.text(toHumanReadableSize(dl.size));
+                            fileSize.appendTo(file);
+
+                            // sources
+                            let sources = $('<div class="dboy-sources"><i class="fa fa-wifi dboy-icon" aria-hidden="true"></i><span class="dboy-value"></span></div>');
+                            sources.find('span').text(dl.sources);
+                            sources.appendTo(file);
+                        }
+                        file.appendTo(item);
+
+                        let progress = $('<div class="dboy-progress"></div>');
+                        {
+                            let progressBar = $('<div class="dboy-progress-bar"></div>');
+                            progressBar.css('width', '0%');
+
+                            progressBar.appendTo(progress);
+                        }
+                        progress.appendTo(item);
+
+                        item.appendTo(itemList);
+
+                        dl.onPropertyChanged(createOnPropertyChangedCallback(item, dl));
+                    }
+                }
+                else {
+                    itemList.html('<p>No downloads available</p>');
+                }
+            },
+            (err: DeliveryBoy.ErrorContext) => {
+                //TODO
+
+                itemList.text('ERROR: ' + err.error);
+            });
+    }
+
+    /**
      * Runs the app.
      */
     public run() {
+        let me = this;
+
         this.updateViewByIcon();
+
+        this.client.start().then(
+            () => {
+                me.reloadDownloadList();
+            },
+            () => {
+
+            });
     }
 
     /**
@@ -185,10 +309,32 @@ class DeliveryBoyApp {
     }
 
     /**
+     * Gets the selector of the 'transfer' button in the left menu bar. 
+     */
+    public get transferButton(): JQuery {
+        return this.menuBarIcons
+                   .find('.dboy-transfer-btn');
+    }
+
+    /**
+     * Gets the content area of the "TRANSFER area" inside the right area.
+     */
+    public get transferArea(): JQuery {
+        return this.rightArea
+                   .find('.dboy-transfer');
+    }
+
+    /**
      * Updates the view based on the selected button icon.
      */
     protected updateViewByIcon() {
         let isMiddleAreaVisible = false;
+        this.middleArea
+            .css('display', 'none');
+        
+        let isRightAreaVisible = false;
+        this.rightArea
+            .css('display', 'none');
 
         let middleRows = this.middleArea
                              .find('.dboy-row');
@@ -202,41 +348,47 @@ class DeliveryBoyApp {
         middleRows.css('display', 'table-row');
         rightRows.css('display', 'table-row');
 
-        let showRow = (selector: JQuery) => {
-            selector.css('display', 'table-row');
-        };
-
         switch (this._selectedButton) {
-            case DeliveryBoyMenuButton.Downloads:
-                this.downloadsButton
+            // transfers
+            case DeliveryBoyMenuButton.Transfers:
+                isMiddleAreaVisible = true;
+                isRightAreaVisible = true;
+
+                this.transferButton
                     .addClass(DBOY_CLASS_SELECTED);
 
-                rightRows.not('.dboy-downloads')
+                middleRows.not('.dboy-transfer')
+                          .css('display', 'none');
+                rightRows.not('.dboy-transfer')
                          .css('display', 'none');
                 break;
 
+            // search
             case DeliveryBoyMenuButton.Search:
                 isMiddleAreaVisible = true;
+                isRightAreaVisible = true;
 
                 this.searchButton
                     .addClass(DBOY_CLASS_SELECTED);
 
-                rightRows.not('.dboy-search')
-                         .css('display', 'none');  
                 middleRows.not('.dboy-search')
                           .css('display', 'none');
+                rightRows.not('.dboy-search')
+                         .css('display', 'none');  
                 break;
 
+            // settings
             case DeliveryBoyMenuButton.Settings:
                 isMiddleAreaVisible = true;
+                isRightAreaVisible = true;
 
                 this.settingsButton
                     .addClass(DBOY_CLASS_SELECTED);
-
-                rightRows.not('.dboy-settings')
-                         .css('display', 'none');  
+                
                 middleRows.not('.dboy-settings')
                           .css('display', 'none');
+                rightRows.not('.dboy-settings')
+                         .css('display', 'none');
                 break;
         }
 
@@ -244,12 +396,13 @@ class DeliveryBoyApp {
             this.middleArea
                 .css('display', 'table-cell');
         }
-        else {
-            this.middleArea
-                .css('display', 'none');
+
+        if (isRightAreaVisible) {
+            this.rightArea
+                .css('display', 'table-cell');
         }
     }
 }
 
 // create app instance
-let $DBoy = new DeliveryBoyApp();
+let $DBoy = new DeliveryBoyApp(Electron.remote.getGlobal("sharedObj").client);

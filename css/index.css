@@ -1,3 +1,8 @@
+/*!
+ *  delivery-boy (https://github.com/mkloubert/delivery-boy) by Marcel Joachim Kloubert <marcel.kloubert@gmx.net>
+ *  License - https://www.gnu.org/licenses/gpl-3.0.en.html
+ */
+
 body {
     display: table;
 }
@@ -73,7 +78,7 @@ body {
 
 #dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle {
     background-color: #252526;
-    width: 224px;
+    width: 320px;
 }
 
 #dboy-content-wrapper .dboy-content .dboy-areas .dboy-right {
@@ -92,4 +97,72 @@ body {
 #dboy-content-wrapper > div.dboy-content > div > div.dboy-area.dboy-right > div {
     position: relative;
     top: -29px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list {
+    display: table-cell;
+    overflow: hidden;
+    position: relative;
+    top: 16px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list h3 {
+    display: block;
+    margin: 0;
+    padding: 0px 8px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list p {
+    display: block;
+    margin: 0;
+    padding: 8px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item {
+    display: block;
+    padding: 8px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file {
+    clear: both;
+    display: block;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file .dboy-name {
+    float: left;
+    font-weight: bold;
+    max-width: 128px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file .dboy-size,
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file .dboy-sources {
+    font-size: 0.75em;
+    position: relative;
+    top: 4px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file .dboy-size {
+    float: left;
+    margin-left: 8px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file .dboy-sources {
+    float: right;
+    font-weight: bold;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-progress {
+    clear: both;
+    display: block;
+    padding-top: 4px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-progress .dboy-progress-bar {
+    background-color: green;
+    display: block;
+    overflow: hidden;
+    height: 6px;
 }
