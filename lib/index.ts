@@ -27,9 +27,24 @@ export declare type PropertyChangedEventHandler = (sender: any, args: PropertyCh
  * Describes a download item.
  */
 export interface DownloadItem extends NotifyPropertyChanged {
+    /**
+     * Gets the short name of the file.
+     */
     fileName: string;
+
+    /**
+     * Gets the size of the file in bytes.
+     */
     size: number;
+
+    /**
+     * Gets the number of sources.
+     */
     sources: number;
+
+    /**
+     * Gets the number of total bytes received.
+     */
     totalBytesReceived: number;
 }
 
