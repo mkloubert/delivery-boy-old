@@ -137,14 +137,18 @@ body {
     white-space: nowrap;
 }
 
-#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file .dboy-size,
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file .dboy-sources .dboy-value {
+    margin-left: 2px;
+}
+
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file .dboy-downloaded,
 #dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file .dboy-sources {
     font-size: 0.75em;
     position: relative;
     top: 4px;
 }
 
-#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file .dboy-size {
+#dboy-content-wrapper .dboy-content .dboy-areas .dboy-middle .dboy-transfer .dboy-list .dboy-item .dboy-file .dboy-downloaded {
     float: left;
     margin-left: 8px;
 }

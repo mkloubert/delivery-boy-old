@@ -21,8 +21,8 @@
 import * as Electron from 'electron';
 // Module to control application life.
 const app = Electron.app;
-// Module to create native browser window.
-import * as DeliveryBoy from './lib/index';
+// Delivery Boy library
+import * as dboy_factory from './lib/factory';
 
 const path = require('path');
 const url = require('url');
@@ -114,6 +114,6 @@ app.on('activate', function () {
 // code. You can also put them in separate files and require them here.
 
 (<any>global).sharedObj = {
-  client: new DeliveryBoy.Client(),
+  client: dboy_factory.createClient(),
   window: mainWindow,
 };

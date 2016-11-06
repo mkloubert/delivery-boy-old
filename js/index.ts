@@ -18,12 +18,43 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import * as DeliveryBoy from '../lib/index';
+import * as DeliveryBoy from '../lib/contracts';
 import * as Electron from 'electron';
+
 
 let mainWindow: Electron.BrowserWindow = Electron.remote.getGlobal("sharedObj").window;
 
 const DBOY_CLASS_SELECTED = 'dboy-selected';
+
+/**
+ * List of client states.
+ */
+enum ClientState {
+    /**
+     * Unknown
+     */
+    Unknown = 0,
+
+    /**
+     * Starting
+     */
+    Starting = 1,
+
+    /**
+     * Running / started
+     */
+    Running = 2,
+
+    /**
+     * Stopping
+     */
+    Stopping = 3,
+
+    /**
+     * Stopped
+     */
+    Stopped = 4,
+}
 
 /**
  * List of menu button IDs.
@@ -77,6 +108,14 @@ class DeliveryBoyApp {
     public init() {
         let me = this;
 
+        this.client.onPropertyChanged((sender: DeliveryBoy.Client, args: DeliveryBoy.PropertyChangedEventArguments) => {
+            switch (args.propertyName) {
+                case 'state':
+                    me.updateStartStopButton();
+                    break;
+            }
+        });
+
         this.transferButton.click(() => {
             me.selectedButton = DeliveryBoyMenuButton.Transfers;
         });
@@ -87,6 +126,17 @@ class DeliveryBoyApp {
 
         this.settingsButton.click(() => {
             me.selectedButton = DeliveryBoyMenuButton.Settings;
+        });
+
+        this.startStopButton.click(() => {
+            me.client.toggle().then(
+                (c) => {
+                    me.updateStartStopButton();
+                    me.reloadDownloadList();
+                },
+                () => {
+                    //TODO
+                });
         });
 
         //TODO: implement
@@ -130,18 +180,19 @@ class DeliveryBoyApp {
         let itemList = me.middleArea.find('.dboy-transfer .dboy-items');
         itemList.html('<p>Loading list...</p>');
 
-        let toHumanReadableSize = (size: number): string => {
-            let x = Math.floor(Math.log(size) / Math.log(1000));
-
+        let toHumanReadableSize = (size: number, noUnit: boolean = false): string => {
             const SIZE_UNITS: string[] = [
                 '',
-                'KB',
-                'MB',
-                'GB',
-                'TB',
-                'PB',
-                'EB',
+                'KB',  // Kilo
+                'MB',  // Mega
+                'GB',  // Giga
+                'TB',  // Tera
+                'PB',  // Peta
+                'EB',  // Exa
             ];
+
+            let x = Math.floor(Math.log(Math.abs(size)) / 
+                               Math.log(1000));
 
             let unitIndex = x;
             if (unitIndex >= SIZE_UNITS.length) {
@@ -150,18 +201,27 @@ class DeliveryBoyApp {
 
             let hrSize = size / Math.pow(1000, x);
 
-            return ('' + hrSize.toFixed(2) + ' ' + SIZE_UNITS[unitIndex]).trim();
+            let str = '' + hrSize.toFixed(2);
+            if (!noUnit) {
+                str += ' ' + SIZE_UNITS[unitIndex];
+            }
+
+            return str.trim();
         };
 
         this.client.requestDownloadList().then(
-            (list: DeliveryBoy.DownloadList) => {
+            (promRes) => {
+                let list = promRes.result;
                 itemList.html('');
 
                 if (list.downloads.length > 0) {
                     let createOnPropertyChangedCallback = (item: JQuery, dl: DeliveryBoy.DownloadItem): (sender: any, args: DeliveryBoy.PropertyChangedEventArguments) => void => {
                         return (sender: DeliveryBoy.DownloadItem, args: DeliveryBoy.PropertyChangedEventArguments) => {
                             let progressBar = item.find('.dboy-progress .dboy-progress-bar');
+                            let downloaded = item.find('.dboy-file .dboy-downloaded');
                             let sourceCount = item.find('.dboy-file .dboy-sources .dboy-value');
+
+                            // downloaded
 
                             switch (args.propertyName) {
                                 case 'sources':
@@ -174,9 +234,13 @@ class DeliveryBoyApp {
                                         progress = sender.totalBytesReceived / sender.size;
                                     }
 
+                                    let downloadedStr = toHumanReadableSize(sender.totalBytesReceived) + ' / ' +
+                                                        toHumanReadableSize(sender.size);
+
                                     progressBar.animate({
                                         width: Math.ceil(progress * 100.0) + '%',
                                     }, 500);
+                                    downloaded.text(downloadedStr);
                                     break;
                             }
                         };
@@ -195,10 +259,10 @@ class DeliveryBoyApp {
                             fileName.text(dl.fileName);
                             fileName.appendTo(file);
 
-                            // file size
-                            let fileSize = $('<div class="dboy-size"></div>');
-                            fileSize.text(toHumanReadableSize(dl.size));
-                            fileSize.appendTo(file);
+                            // downloaded data
+                            let downloaded = $('<div class="dboy-downloaded"></div>');
+                            downloaded.text(toHumanReadableSize(dl.size));
+                            downloaded.appendTo(file);
 
                             // sources
                             let sources = $('<div class="dboy-sources"><i class="fa fa-wifi dboy-icon" aria-hidden="true"></i><span class="dboy-value"></span></div>');
@@ -225,7 +289,7 @@ class DeliveryBoyApp {
                     itemList.html('<p>No downloads available</p>');
                 }
             },
-            (err: DeliveryBoy.ErrorContext) => {
+            (err) => {
                 //TODO
 
                 itemList.text('ERROR: ' + err.error);
@@ -239,14 +303,10 @@ class DeliveryBoyApp {
         let me = this;
 
         this.updateViewByIcon();
+        this.updateStartStopButton();
 
-        this.client.start().then(
-            () => {
-                me.reloadDownloadList();
-            },
-            () => {
-
-            });
+        this.startStopButton
+            .click();
     }
 
     /**
@@ -309,6 +369,14 @@ class DeliveryBoyApp {
     }
 
     /**
+     * Gets the selector of the START/STOP button in inside the left menu bar area.
+     */
+    public get startStopButton(): JQuery {
+        return this.menuBarIcons
+                   .find('.dboy-startstop-btn');
+    }
+
+    /**
      * Gets the selector of the 'transfer' button in the left menu bar. 
      */
     public get transferButton(): JQuery {
@@ -322,6 +390,32 @@ class DeliveryBoyApp {
     public get transferArea(): JQuery {
         return this.rightArea
                    .find('.dboy-transfer');
+    }
+
+    /**
+     * Updates the Start/Stop button.
+     */
+    protected updateStartStopButton() {
+        let newIcon: JQuery;
+
+        switch (this.client.state) {
+            case ClientState.Running:
+                newIcon = $('<i class="fa fa-stop" aria-hidden="true"></i>');
+                break;
+
+            case ClientState.Stopped:
+                newIcon = $('<i class="fa fa-play" aria-hidden="true"></i>');
+                break;
+
+            default:
+                newIcon = $('<i class="fa fa-clock-o" aria-hidden="true"></i>');
+                break;
+        }
+
+        this.startStopButton.html('');
+        if (newIcon) {
+            newIcon.appendTo(this.startStopButton);
+        }
     }
 
     /**
