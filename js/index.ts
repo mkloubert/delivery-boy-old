@@ -209,9 +209,9 @@ class DeliveryBoyApp {
             return str.trim();
         };
 
-        this.client.requestDownloadList().then(
-            (promRes) => {
-                let list = promRes.result;
+        this.client.downloads().then(
+            (pr) => {
+                let list = pr.result;
                 itemList.html('');
 
                 if (list.downloads.length > 0) {
@@ -292,7 +292,11 @@ class DeliveryBoyApp {
             (err) => {
                 //TODO
 
-                itemList.text('ERROR: ' + err.error);
+                let errMsg = $('<p></p>');
+                errMsg.text('ERROR: ' + err.error);
+
+                itemList.html('');
+                itemList.append(errMsg);
             });
     }
 

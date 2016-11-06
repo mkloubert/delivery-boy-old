@@ -17,11 +17,43 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+/**
+ * 'Unknown' client state
+ */
 export const CLIENT_STATE_UNKNOWN = 0;
+/**
+ * 'Starting' client state
+ */
 export const CLIENT_STATE_STARTING = 1;
+/**
+ * 'Running' client state
+ */
 export const CLIENT_STATE_RUNNING = 2;
+/**
+ * 'Stopping' client state
+ */
 export const CLIENT_STATE_STOPPING = 3;
+/**
+ * 'Stopped' client state
+ */
 export const CLIENT_STATE_STOPPED = 4;
+
+/**
+ * 'Disposed' event
+ */
+export const EVENT_NAME_DISPOSED = 'disposed';
+/**
+ * 'Disposing' event
+ */
+export const EVENT_NAME_DISPOSING = 'disposing';
+/**
+ * 'Download list initialized' event
+ */
+export const EVENT_NAME_DOWNLOAD_LIST_INITIALIZED = 'downloadlistinitialized';
+/**
+ * 'Property changed' event
+ */
+export const EVENT_NAME_PROPERTY_CHANGED = 'propertychanged';
 
 /**
  * Describes a client.
@@ -34,7 +66,7 @@ export interface Client extends NotifyPropertyChanged {
      * 
      * @return {PromiseLike<PromiseResult<DownloadList, T>>} The promise.
      */
-    requestDownloadList<T>(tag?: T): PromiseLike<PromiseResult<DownloadList, T>>;
+    downloads<T>(tag?: T): PromiseLike<PromiseResult<DownloadList, T>>;
 
     /**
      * Starts the client.
@@ -62,6 +94,16 @@ export interface Client extends NotifyPropertyChanged {
      * @return {PromiseLike<PromiseResult<Client, T>>} The promise.
      */
     toggle<T>(tag?: T): PromiseLike<PromiseResult<Client, T>>;
+
+    /**
+     * Invokes a logic for the case when the client reached 'running' or 'stopped'
+     * state.
+     * 
+     * @param {T} [tag] An optional object / value for the invocation.
+     * 
+     * @return {PromiseLike<PromiseResult<Client, T>>} The promise.
+     */
+    whenRunningOrStopped<T>(tag?: T): PromiseLike<PromiseResult<Client, T>>;
 
     /**
      * Gets the current client state.
@@ -139,6 +181,21 @@ export interface DownloadList extends ClientObject, Disposable {
 }
 
 /**
+ * Arguments for a 'Download list initialized' event.
+ */
+export interface DownloadInitializedEventArguments extends EventArguments {
+    /**
+     * The error (if occurred).
+     */
+    error?: any;
+
+    /**
+     * The list (if succeeded).
+     */
+    list?: DownloadList;
+}
+
+/**
  * Descibes an error context.
  */
 export interface ErrorContext<T> {
@@ -186,12 +243,22 @@ export interface EventObject {
     /**
      * Registers for an event.
      * 
+     * @param {string | symbol} eventName The name of the event.
+     * @param {EventHandler} handler The handler to register.
+     * 
+     * @chainable
+     */
+    on(eventName: string | symbol, handler: EventHandler): EventObject;
+
+    /**
+     * Registers for an event (once).
+     * 
      * @param {string} eventName The name of the event.
      * @param {EventHandler} handler The handler to register.
      * 
      * @chainable
      */
-    on(eventName: string, handler: EventHandler): EventObject;
+    once(eventName: string | symbol, handler: EventHandler): EventObject;
 }
 
 /**

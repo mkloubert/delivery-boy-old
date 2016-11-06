@@ -17,12 +17,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import * as dboy_contracts from './contracts';
+import * as Events from 'events';
 
 declare const Promise: PromiseConstructorLike;
 
-abstract class RaisePropertyChangedBase implements dboy_contracts.Disposable, dboy_contracts.NotifyPropertyChanged {
+abstract class CommonEventObjectBase implements dboy_contracts.Disposable, dboy_contracts.NotifyPropertyChanged {
+    protected readonly _EVENTS = new Events.EventEmitter();
     protected _isDisposed = false;
-    protected _propertyChangedEventHandlers: dboy_contracts.PropertyChangedEventHandler[] = [];
 
     /* @inheritdoc */
     public dispose<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.Disposable, T>> {
@@ -46,24 +47,75 @@ abstract class RaisePropertyChangedBase implements dboy_contracts.Disposable, db
     }
 
     private disposeInner<T>(disposing: boolean,
-                            resolve: (value?: RaisePropertyChangedBase | PromiseLike<RaisePropertyChangedBase>) => void,
-                            reject: (reason?: any) => void,
+                            resolve: (value?: {} | PromiseLike<{}>) => void, reject: (reason?: any) => void,
                             tag?: T) {
+        let me = this;
+
         if (disposing && this.isDisposed) {
             return;
         }
 
-        this.disposing(resolve, reject, tag,
-                       disposing);
+        let resolveInvoked = false;
+        let rejectInvoked = true;
+
+        let resolveWrapper = () => {
+            if (resolveInvoked || rejectInvoked) {
+                return;
+            }
+
+            resolveInvoked = true;
+
+            if (disposing) {
+                me._isDisposed = true;
+                
+                me.raisePropertyChanged('isDisposed');
+                me.raiseEvent(dboy_contracts.EVENT_NAME_DISPOSED);
+            }
+
+            resolve(<dboy_contracts.PromiseResult<CommonEventObjectBase, T>>{
+                result: this,
+                tag: tag,
+            });
+        };
+
+        let rejectWrapper = (err: any) => {
+            if (rejectInvoked || resolveInvoked) {
+                return;
+            }
+
+            rejectInvoked = true;
+            reject(<dboy_contracts.ErrorContext<T>>{
+                category: 'dispose',
+                code: 1,
+                error: err,
+                object: this,
+                tag: tag,
+            });
+        };
 
         if (disposing) {
-            this._isDisposed = true;
-            this.raisePropertyChanged('isDisposed');
+            this.raiseEvent(dboy_contracts.EVENT_NAME_DISPOSING);
+        }
+
+        try {
+            this.disposing(resolveWrapper, rejectWrapper,
+                           tag,
+                           disposing);
+        }
+        catch (e) {
+            rejectWrapper(e);
         }
     }
 
-    protected disposing<T>(resolve: (value?: RaisePropertyChangedBase | PromiseLike<RaisePropertyChangedBase>) => void,
-                           reject: (reason?: any) => void,
+    /**
+     * The logic for the 'dispose()' method.
+     * 
+     * @param {Function} resolve The 'succeeded' callback.
+     * @param {Function} reject The 'error' callback.
+     * @param {T} tag The optional value for the callbacks.
+     * @param {boolean} disposing 'dispose' method was called or not.
+     */
+    protected disposing<T>(resolve: () => void, reject: (reason: any) => void,
                            tag: T,
                            disposing: boolean) {
 
@@ -76,159 +128,217 @@ abstract class RaisePropertyChangedBase implements dboy_contracts.Disposable, db
     }
 
     /* @inheritdoc */
-    public on(eventName: string, handler: dboy_contracts.EventHandler): RaisePropertyChangedBase {
-        switch (eventName.toLowerCase().trim()) {
-            case 'propertychanged':
-                let propertyChangedHandler: dboy_contracts.PropertyChangedEventHandler;
-                if (handler) {
-                    propertyChangedHandler = (sender, e) => {
-                        handler(sender, e);
-                    };
-                }
+    public on(eventName: string | symbol, handler: dboy_contracts.EventHandler): CommonEventObjectBase {
+        let me = this;
 
-                return this.onPropertyChanged(propertyChangedHandler);
-                // propertychanged
-        }
-
-        throw `Unknown event '${eventName}'`;
-    }
-
-    /* @inheritdoc */
-    public onPropertyChanged(cb: dboy_contracts.PropertyChangedEventHandler): RaisePropertyChangedBase {
-        if (cb) {
-            this._propertyChangedEventHandlers.push(cb);
-        }
-
-        return this;
-    }
-
-    /* @inheritdoc */
-    public raisePropertyChanged(propertyName: string) {
-        for (let i = 0; i < this._propertyChangedEventHandlers.length; i++) {
-            let cb = this._propertyChangedEventHandlers[i];
-
-            cb(this, {
-                propertyName: propertyName,
+        if (handler) {
+            this._EVENTS.on(eventName, (args: dboy_contracts.EventArguments) => {
+                handler(me, args);
             });
         }
+
+        return me;
+    }
+
+    /* @inheritdoc */
+    public once(eventName: string | symbol, handler: dboy_contracts.EventHandler): CommonEventObjectBase {
+        let me = this;
+
+        if (handler) {
+            this._EVENTS.once(eventName, (args: dboy_contracts.EventArguments) => {
+                handler(me, args);
+            });
+        }
+
+        return me;
+    }
+
+    /* @inheritdoc */
+    public onPropertyChanged(handler: dboy_contracts.PropertyChangedEventHandler): CommonEventObjectBase {
+        return this.on(dboy_contracts.EVENT_NAME_PROPERTY_CHANGED,
+                       handler);
+    }
+
+    /**
+     * Raises an event.
+     * 
+     * @param {string | symbol} eventName The event to raise.
+     * @param [dboy_contracts.EventArguments] [args] The optional arguments for the event.
+     * 
+     * @return {boolean} Event was raised or not.
+     */
+    public raiseEvent(eventName: string | symbol, args?: dboy_contracts.EventArguments): boolean {
+        if (arguments.length < 2) {
+            args = {};
+        }
+
+        return this._EVENTS
+                   .emit(eventName, args);
+    }
+
+    /**
+     * Raises the 'property changed' event.
+     * 
+     * @param {string} propertyName The name of the property.
+     * 
+     * @return {boolean} Event was raised or not.
+     */
+    public raisePropertyChanged(propertyName: string): boolean {
+        return this.raiseEvent(dboy_contracts.EVENT_NAME_PROPERTY_CHANGED,
+                               {
+                                   propertyName: propertyName,
+                               });
     }
 }
 
 /**
  * A client instance.
  */
-class ClientImpl extends RaisePropertyChangedBase implements dboy_contracts.Client {
+class ClientImpl extends CommonEventObjectBase implements dboy_contracts.Client {
     protected _downloads: DownloadListImpl;
     protected _state = dboy_contracts.CLIENT_STATE_STOPPED;
 
     /* @inheritdoc */
-    public requestDownloadList<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.DownloadList, T>> {
+    public downloads<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.DownloadList, T>> {
         let me = this;
 
         return new Promise((resolve, reject) => {
+            let completed = (err?: any) => {
+                if (err) {
+                    reject(<dboy_contracts.ErrorContext<T>>{
+                        category: 'client.requestdownloadlist',
+                        code: 1,
+                        error: err,
+                        message: '' + err,
+                        object: me,
+                        tag: tag,
+                    });
+                }
+                else {
+                    resolve(<dboy_contracts.PromiseResult<dboy_contracts.DownloadList, T>>{
+                        result: me._downloads,
+                        tag: tag,
+                    });
+                }
+            };
+
             try {
-                let list = new DownloadListImpl(me);
+                if (!me._downloads) {
+                    // not initialized yet
+                    let list = new DownloadListImpl(me);
 
-                let initMock = (dl: DownloadItemImpl) => {
-                    let timeout: NodeJS.Timer = null;
-                    let shutdown = () => {
-                        let t = timeout;
-                        timeout = null;
-
-                        if (null !== t) {
-                            clearTimeout(t);
+                    me.once(dboy_contracts.EVENT_NAME_DOWNLOAD_LIST_INITIALIZED, (args: dboy_contracts.DownloadInitializedEventArguments) => {
+                        if (args.error) {
+                            completed(args.error);
                         }
-                    };
-
-                    dl.onPropertyChanged((sender, e) => {
-                        switch (e.propertyName) {
-                            case 'isDisposed':
-                                shutdown();
-                                break;
+                        else {
+                            completed();
                         }
                     });
 
-                    timeout = setInterval(() => {
-                        if (null === timeout) {
-                            return;
-                        }
+                    let initMock = (dl: DownloadItemImpl) => {
+                        let timeout: NodeJS.Timer = null;
+                        let shutdown = () => {
+                            let t = timeout;
+                            timeout = null;
 
-                        if (dl.isDisposed) {
-                            shutdown();
-                            return;
-                        }
+                            if (null !== t) {
+                                clearTimeout(t);
+                            }
+                        };
 
-                        let lastBytesReceived = dl.totalBytesReceived;
-                        let lastSources = dl.sources;
+                        dl.onPropertyChanged((sender, e) => {
+                            switch (e.propertyName) {
+                                case 'isDisposed':
+                                    shutdown();
+                                    break;
+                            }
+                        });
 
-                        let newSources = lastSources + Math.ceil(20 * Math.random()) - 10;
-                        if (newSources < 0) {
-                            newSources = 0;
-                        }
-                        
-                        let newBytesReceived = lastBytesReceived + 81920;
-                        if (newBytesReceived > dl.size) {
-                            newBytesReceived = dl.size;
-                        }
+                        timeout = setInterval(() => {
+                            if (null === timeout) {
+                                return;
+                            }
 
-                        if (newBytesReceived == dl.size) {
-                            shutdown();
-                        }
-                        
-                        if (newBytesReceived != lastBytesReceived) {
-                            dl._totalBytesReceived = newBytesReceived;
+                            if (dl.isDisposed) {
+                                shutdown();
+                                return;
+                            }
 
-                            dl.raisePropertyChanged('totalBytesReceived');
-                        }
-                        if (newSources != lastSources) {
-                            dl._sources = newSources;
+                            let lastBytesReceived = dl.totalBytesReceived;
+                            let lastSources = dl.sources;
 
-                            dl.raisePropertyChanged('sources');
-                        }
-                    }, 1000);
-                };
+                            let newSources = lastSources + Math.ceil(20 * Math.random()) - 10;
+                            if (newSources < 0) {
+                                newSources = 0;
+                            }
+                            
+                            let newBytesReceived = lastBytesReceived + 81920;
+                            if (newBytesReceived > dl.size) {
+                                newBytesReceived = dl.size;
+                            }
 
-                let newDownloadItem: DownloadItemImpl;
+                            if (newBytesReceived == dl.size) {
+                                shutdown();
+                            }
+                            
+                            if (newBytesReceived != lastBytesReceived) {
+                                dl._totalBytesReceived = newBytesReceived;
 
-                newDownloadItem = new DownloadItemImpl(list);
-                newDownloadItem._totalBytesReceived = 0;
-                newDownloadItem._fileName = 'Tears go by.mp3';
-                newDownloadItem._size = 1987654;
-                newDownloadItem._sources = 1000;
-                list.downloads.push(newDownloadItem);
+                                dl.raisePropertyChanged('totalBytesReceived');
+                            }
+                            if (newSources != lastSources) {
+                                dl._sources = newSources;
 
-                newDownloadItem = new DownloadItemImpl(list);
-                newDownloadItem._totalBytesReceived = 0;
-                newDownloadItem._fileName = 'PB_DE_062016_0001.jpg';
-                newDownloadItem._size = 234567;
-                newDownloadItem._sources = 54;
-                list.downloads.push(newDownloadItem);
+                                dl.raisePropertyChanged('sources');
+                            }
+                        }, 1000);
+                    };
 
-                newDownloadItem = new DownloadItemImpl(list);
-                newDownloadItem._totalBytesReceived = 0;
-                newDownloadItem._fileName = 'TWD - S0701.mp4';
-                newDownloadItem._size = 345678901;
-                newDownloadItem._sources = 666;
-                list.downloads.push(newDownloadItem);
+                    let newDownloadItem: DownloadItemImpl;
 
-                for (let i = 0; i < list.downloads.length; i++) {
-                    initMock(<DownloadItemImpl>list.downloads[i]);
+                    newDownloadItem = new DownloadItemImpl(list);
+                    newDownloadItem._totalBytesReceived = 0;
+                    newDownloadItem._fileName = 'Tears go by.mp3';
+                    newDownloadItem._size = 1987654;
+                    newDownloadItem._sources = 1000;
+                    list.downloads.push(newDownloadItem);
+
+                    newDownloadItem = new DownloadItemImpl(list);
+                    newDownloadItem._totalBytesReceived = 0;
+                    newDownloadItem._fileName = 'PB_DE_062016_0001.jpg';
+                    newDownloadItem._size = 234567;
+                    newDownloadItem._sources = 54;
+                    list.downloads.push(newDownloadItem);
+
+                    newDownloadItem = new DownloadItemImpl(list);
+                    newDownloadItem._totalBytesReceived = 0;
+                    newDownloadItem._fileName = 'TWD - S0701.mp4';
+                    newDownloadItem._size = 345678901;
+                    newDownloadItem._sources = 666;
+                    list.downloads.push(newDownloadItem);
+
+                    for (let i = 0; i < list.downloads.length; i++) {
+                        initMock(<DownloadItemImpl>list.downloads[i]);
+                    }
+
+                    me._downloads = list;
+
+                    me.raiseEvent(dboy_contracts.EVENT_NAME_DOWNLOAD_LIST_INITIALIZED,
+                                  {
+                                      list: list,
+                                  });
                 }
-                
-                resolve(<dboy_contracts.PromiseResult<dboy_contracts.DownloadList, T>>{
-                    result: list,
-                    tag: tag,
-                });
+
+                completed();
             }
             catch (e) {
-                reject(<dboy_contracts.ErrorContext<T>>{
-                    category: 'client.requestDownloadList',
-                    code: 1,
-                    error: e,
-                    message: '' + e,
-                    object: me,
-                    tag: tag,
-                });
+                me.raiseEvent(dboy_contracts.EVENT_NAME_DOWNLOAD_LIST_INITIALIZED,
+                              {
+                                  error: e,
+                              });
+
+                completed(e);
             }
         });
     }
@@ -315,20 +425,19 @@ class ClientImpl extends RaisePropertyChangedBase implements dboy_contracts.Clie
             let rejectWrapper = (err: dboy_contracts.ErrorContext<T>) => {
                 err.category = 'client.toggle';
                 err.object = me;
+                err.tag = tag;
 
                 reject(err);
             };
 
             let currentState = me.state;
             switch (currentState) {
-                case 2:
-                    // running
+                case dboy_contracts.CLIENT_STATE_RUNNING:
                     me.stop(tag)
                       .then(resolve, rejectWrapper);
                     break;
 
-                case 4:
-                    // stopped
+                case dboy_contracts.CLIENT_STATE_STOPPED:
                     me.start(tag)
                       .then(resolve, rejectWrapper);
                     break;
@@ -340,15 +449,71 @@ class ClientImpl extends RaisePropertyChangedBase implements dboy_contracts.Clie
                         code: 1,
                         error: err,
                         message: '' + err,
-                        tag: tag,
                     });
                     break;
             }
         });
     }
+
+    /* @inheritdoc */
+    public whenRunningOrStopped<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.Client, T>> {
+        let me = this;
+        
+        return new Promise((resolve, reject) => {
+            let rejectWrapper = (err: dboy_contracts.ErrorContext<T>) => {
+                err.category = 'client.whenrunningorstopped';
+                err.object = me;
+
+                reject(err);
+            };
+
+            try {
+                let currentState = me.state;
+                switch (currentState) {
+                    case dboy_contracts.CLIENT_STATE_RUNNING:
+                    case dboy_contracts.CLIENT_STATE_STOPPED:
+                        resolve(<dboy_contracts.PromiseResult<dboy_contracts.Client, T>>{
+                            result: me,
+                            tag: tag,
+                        });
+                        break;
+
+                    case dboy_contracts.CLIENT_STATE_STARTING:
+                    case dboy_contracts.CLIENT_STATE_STOPPING:
+                        me.whenRunningOrStopped()
+                          .then((result) => {
+                                    resolve(result);
+                                },
+                                (err) => {
+                                    reject(err);
+                                });
+                        break;
+
+                    default:
+                        let err = new Error('Client is in unknown state: ' + currentState);
+
+                        rejectWrapper(<dboy_contracts.ErrorContext<T>>{
+                            code: 2,
+                            error: err,
+                            message: '' + err,
+                            tag: tag,
+                        });
+                        break;
+                }
+            }
+            catch (e) {
+                rejectWrapper(<dboy_contracts.ErrorContext<T>>{
+                    code: 1,
+                    error: e,
+                    message: '' + e,
+                    tag: tag,
+                });
+            }
+        });
+    }
 }
 
-class DownloadListImpl extends RaisePropertyChangedBase implements dboy_contracts.DownloadList {
+class DownloadListImpl extends CommonEventObjectBase implements dboy_contracts.DownloadList {
     protected _client: ClientImpl;
     protected _downloads: DownloadItemImpl[] = [];
 
@@ -364,8 +529,7 @@ class DownloadListImpl extends RaisePropertyChangedBase implements dboy_contract
     }
 
     /* @inheritdoc */
-    protected disposing<T>(resolve: (value?: RaisePropertyChangedBase | PromiseLike<RaisePropertyChangedBase>) => void,
-                           reject: (reason?: any) => void,
+    protected disposing<T>(resolve: () => void, reject: (reason: any) => void,
                            tag: T,
                            disposing: boolean) {
         
@@ -375,32 +539,25 @@ class DownloadListImpl extends RaisePropertyChangedBase implements dboy_contract
         let errors: dboy_contracts.ErrorContext<T>[] = [];
         let completed = () => {
             if (errors.length > 0) {
-                reject(<dboy_contracts.ErrorContext<T>>{
-                    category: 'downloadlist.dispose',
-                    code: 1,
-                    error: errors,
-                    message: errors.map((x) => '' + x).join('\n'),
-                    object: me,
-                    tag: tag,
-                });
+                let err = new Error(errors.map(x => `[] ` + x)
+                                          .join('\n\n'));
+
+                reject(err);
             }
             else {
-                resolve(me);
+                resolve();
             }
         };
 
         let i = 0;
         let disposeNext: () => void;
-        let countDown = () => {
-            --remainingItems;
-            disposeNext();
-        };
-
         disposeNext = function(): void {
             if (remainingItems < 1) {
                 completed();
                 return;
             }
+
+            --remainingItems;
 
             let dl = me._downloads[i];
             if (!dl) {
@@ -410,16 +567,16 @@ class DownloadListImpl extends RaisePropertyChangedBase implements dboy_contract
 
             dl.dispose(tag).then(
                 () => {
-                    countDown();
-
                     me._downloads
                       .splice(i, 1);
+
+                    disposeNext();
                 },
                 (e) => {
                     errors.push(e);
                     ++i;
 
-                    countDown();
+                    disposeNext();
                 });
         };
 
@@ -432,7 +589,7 @@ class DownloadListImpl extends RaisePropertyChangedBase implements dboy_contract
     }
 }
 
-class DownloadItemImpl extends RaisePropertyChangedBase implements dboy_contracts.DownloadItem {
+class DownloadItemImpl extends CommonEventObjectBase implements dboy_contracts.DownloadItem {
     public _fileName: string;  //TODO: make invisible
     protected _list: DownloadListImpl;
     public _size: number;  //TODO: make invisible
@@ -450,6 +607,7 @@ class DownloadItemImpl extends RaisePropertyChangedBase implements dboy_contract
         return this._fileName;
     }
 
+    /* @inheritdoc */
     public get list(): DownloadListImpl {
         return this._list;
     }

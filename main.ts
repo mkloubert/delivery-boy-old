@@ -21,7 +21,8 @@
 import * as Electron from 'electron';
 // Module to control application life.
 const app = Electron.app;
-// Delivery Boy library
+// Delivery Boy
+import * as dboy_contracts from './lib/contracts';
 import * as dboy_factory from './lib/factory';
 
 const path = require('path');
