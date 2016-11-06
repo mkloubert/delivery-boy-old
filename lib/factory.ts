@@ -302,24 +302,24 @@ class ClientImpl extends CommonEventObjectBase implements dboy_contracts.Client 
                     newDownloadItem._fileName = 'Tears go by.mp3';
                     newDownloadItem._size = 1987654;
                     newDownloadItem._sources = 1000;
-                    list.downloads.push(newDownloadItem);
+                    list._ITEMS.push(newDownloadItem);
 
                     newDownloadItem = new DownloadItemImpl(list);
                     newDownloadItem._totalBytesReceived = 0;
                     newDownloadItem._fileName = 'PB_DE_062016_0001.jpg';
                     newDownloadItem._size = 234567;
                     newDownloadItem._sources = 54;
-                    list.downloads.push(newDownloadItem);
+                    list._ITEMS.push(newDownloadItem);
 
                     newDownloadItem = new DownloadItemImpl(list);
                     newDownloadItem._totalBytesReceived = 0;
                     newDownloadItem._fileName = 'TWD - S0701.mp4';
                     newDownloadItem._size = 345678901;
                     newDownloadItem._sources = 666;
-                    list.downloads.push(newDownloadItem);
+                    list._ITEMS.push(newDownloadItem);
 
-                    for (let i = 0; i < list.downloads.length; i++) {
-                        initMock(<DownloadItemImpl>list.downloads[i]);
+                    for (let i = 0; i < list._ITEMS.length; i++) {
+                        initMock(list._ITEMS[i]);
                     }
 
                     me._downloads = list;
@@ -514,18 +514,18 @@ class ClientImpl extends CommonEventObjectBase implements dboy_contracts.Client 
 }
 
 class DownloadListImpl extends CommonEventObjectBase implements dboy_contracts.DownloadList {
-    protected _client: ClientImpl;
-    protected _downloads: DownloadItemImpl[] = [];
+    protected readonly _CLIENT: ClientImpl;
+    public readonly _ITEMS: DownloadItemImpl[] = [];  //TODO
 
     constructor(client: ClientImpl) {
         super();
 
-        this._client = client;
+        this._CLIENT = client;
     }
 
     /* @inheritdoc */
     public get client(): ClientImpl {
-        return this._client;
+        return this._CLIENT;
     }
 
     /* @inheritdoc */
@@ -534,7 +534,7 @@ class DownloadListImpl extends CommonEventObjectBase implements dboy_contracts.D
                            disposing: boolean) {
         
         let me = this;
-        let remainingItems = this._downloads.length;
+        let remainingItems = this._ITEMS.length;
 
         let errors: dboy_contracts.ErrorContext<T>[] = [];
         let completed = () => {
@@ -559,7 +559,7 @@ class DownloadListImpl extends CommonEventObjectBase implements dboy_contracts.D
 
             --remainingItems;
 
-            let dl = me._downloads[i];
+            let dl = me._ITEMS[i];
             if (!dl) {
                 completed();
                 return;
@@ -567,7 +567,7 @@ class DownloadListImpl extends CommonEventObjectBase implements dboy_contracts.D
 
             dl.dispose(tag).then(
                 () => {
-                    me._downloads
+                    me._ITEMS
                       .splice(i, 1);
 
                     disposeNext();
@@ -584,8 +584,26 @@ class DownloadListImpl extends CommonEventObjectBase implements dboy_contracts.D
     }
 
     /* @inheritdoc */
-    public get downloads(): DownloadItemImpl[] {
-        return this._downloads;
+    public items<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.DownloadItem[], T>> {
+        let me = this;
+        
+        return new Promise((resolve, reject) => {
+            try {
+                resolve(<dboy_contracts.PromiseResult<dboy_contracts.DownloadItem[], T>> {
+                    result: me._ITEMS,
+                    tag: tag,
+                });
+            }
+            catch (e) {
+                reject(<dboy_contracts.ErrorContext<T>>{
+                    category: 'items',
+                    code: 1,
+                    error: e,
+                    message: '' + e,
+                    tag: tag,
+                });
+            }
+        });
     }
 }
 

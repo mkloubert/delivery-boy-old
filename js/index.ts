@@ -209,94 +209,108 @@ class DeliveryBoyApp {
             return str.trim();
         };
 
+        let showError = (err: DeliveryBoy.ErrorContext<any>) => {
+            //TODO
+
+            let errMsg = $('<p></p>');
+            errMsg.text('ERROR: ' + err.error);
+
+            itemList.html('');
+            itemList.append(errMsg);
+        };
+
         this.client.downloads().then(
             (pr) => {
                 let list = pr.result;
-                itemList.html('');
+                
+                list.items().then(
+                    (pr) => {
+                        itemList.html('');
 
-                if (list.downloads.length > 0) {
-                    let createOnPropertyChangedCallback = (item: JQuery, dl: DeliveryBoy.DownloadItem): (sender: any, args: DeliveryBoy.PropertyChangedEventArguments) => void => {
-                        return (sender: DeliveryBoy.DownloadItem, args: DeliveryBoy.PropertyChangedEventArguments) => {
-                            let progressBar = item.find('.dboy-progress .dboy-progress-bar');
-                            let downloaded = item.find('.dboy-file .dboy-downloaded');
-                            let sourceCount = item.find('.dboy-file .dboy-sources .dboy-value');
+                        let items = pr.result;
 
-                            // downloaded
+                        if (items.length > 0) {
+                            let createOnPropertyChangedCallback = (item: JQuery, dl: DeliveryBoy.DownloadItem): (sender: any, args: DeliveryBoy.PropertyChangedEventArguments) => void => {
+                                return (sender: DeliveryBoy.DownloadItem, args: DeliveryBoy.PropertyChangedEventArguments) => {
+                                    let progressBar = item.find('.dboy-progress .dboy-progress-bar');
+                                    let downloaded = item.find('.dboy-file .dboy-downloaded');
+                                    let sourceCount = item.find('.dboy-file .dboy-sources .dboy-value');
 
-                            switch (args.propertyName) {
-                                case 'sources':
-                                    sourceCount.text(sender.sources);
-                                    break;
+                                    // downloaded
 
-                                case 'totalBytesReceived':
-                                    let progress = 1;
-                                    if (sender.size > 0) {
-                                        progress = sender.totalBytesReceived / sender.size;
+                                    switch (args.propertyName) {
+                                        case 'sources':
+                                            sourceCount.text(sender.sources);
+                                            break;
+
+                                        case 'totalBytesReceived':
+                                            let progress = 1;
+                                            if (sender.size > 0) {
+                                                progress = sender.totalBytesReceived / sender.size;
+                                            }
+
+                                            let downloadedStr = toHumanReadableSize(sender.totalBytesReceived) + ' / ' +
+                                                                toHumanReadableSize(sender.size);
+
+                                            progressBar.animate({
+                                                width: Math.ceil(progress * 100.0) + '%',
+                                            }, 500);
+                                            downloaded.text(downloadedStr);
+                                            break;
                                     }
+                                };
+                            };
 
-                                    let downloadedStr = toHumanReadableSize(sender.totalBytesReceived) + ' / ' +
-                                                        toHumanReadableSize(sender.size);
+                            for (let i = 0; i < items.length; i++) {
+                                let dl = items[i];
 
-                                    progressBar.animate({
-                                        width: Math.ceil(progress * 100.0) + '%',
-                                    }, 500);
-                                    downloaded.text(downloadedStr);
-                                    break;
+                                let item = $('<div class="dboy-item"></div>');
+
+                                let file = $('<div class="dboy-file"></div>');
+                                {
+                                    // file name
+                                    let fileName = $('<div class="dboy-name"></div>');
+                                    fileName.attr('title', dl.fileName);
+                                    fileName.text(dl.fileName);
+                                    fileName.appendTo(file);
+
+                                    // downloaded data
+                                    let downloaded = $('<div class="dboy-downloaded"></div>');
+                                    downloaded.text(toHumanReadableSize(dl.size));
+                                    downloaded.appendTo(file);
+
+                                    // sources
+                                    let sources = $('<div class="dboy-sources"><i class="fa fa-wifi dboy-icon" aria-hidden="true"></i><span class="dboy-value"></span></div>');
+                                    sources.find('span').text(dl.sources);
+                                    sources.appendTo(file);
+                                }
+                                file.appendTo(item);
+
+                                // progress bar
+                                let progress = $('<div class="dboy-progress"></div>');
+                                {
+                                    let progressBar = $('<div class="dboy-progress-bar"></div>');
+                                    progressBar.css('width', '0%');
+
+                                    progressBar.appendTo(progress);
+                                }
+                                progress.appendTo(item);
+
+                                item.appendTo(itemList);
+
+                                dl.onPropertyChanged(createOnPropertyChangedCallback(item, dl));
                             }
-                        };
-                    };
-
-                    for (let i = 0; i < list.downloads.length; i++) {
-                        let dl = list.downloads[i];
-
-                        let item = $('<div class="dboy-item"></div>');
-
-                        let file = $('<div class="dboy-file"></div>');
-                        {
-                            // file name
-                            let fileName = $('<div class="dboy-name"></div>');
-                            fileName.attr('title', dl.fileName);
-                            fileName.text(dl.fileName);
-                            fileName.appendTo(file);
-
-                            // downloaded data
-                            let downloaded = $('<div class="dboy-downloaded"></div>');
-                            downloaded.text(toHumanReadableSize(dl.size));
-                            downloaded.appendTo(file);
-
-                            // sources
-                            let sources = $('<div class="dboy-sources"><i class="fa fa-wifi dboy-icon" aria-hidden="true"></i><span class="dboy-value"></span></div>');
-                            sources.find('span').text(dl.sources);
-                            sources.appendTo(file);
                         }
-                        file.appendTo(item);
-
-                        let progress = $('<div class="dboy-progress"></div>');
-                        {
-                            let progressBar = $('<div class="dboy-progress-bar"></div>');
-                            progressBar.css('width', '0%');
-
-                            progressBar.appendTo(progress);
+                        else {
+                            itemList.html('<p>No downloads available</p>');
                         }
-                        progress.appendTo(item);
-
-                        item.appendTo(itemList);
-
-                        dl.onPropertyChanged(createOnPropertyChangedCallback(item, dl));
-                    }
-                }
-                else {
-                    itemList.html('<p>No downloads available</p>');
-                }
+                    },
+                    (err) => {
+                        showError(err);
+                    });
             },
             (err) => {
-                //TODO
-
-                let errMsg = $('<p></p>');
-                errMsg.text('ERROR: ' + err.error);
-
-                itemList.html('');
-                itemList.append(errMsg);
+                showError(err);
             });
     }
 

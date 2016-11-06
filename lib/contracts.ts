@@ -175,9 +175,13 @@ export interface DownloadItem extends Disposable, NotifyPropertyChanged {
  */
 export interface DownloadList extends ClientObject, Disposable {
     /**
-     * Gets the list of downloads.
+     * Gets the list of download items.
+     * 
+     * @param {T} [tag] An optional object / value for the invocation.
+     * 
+     * @return {PromiseLike<PromiseResult<DownloadItem[], T>>} The promise.
      */
-    downloads: DownloadItem[];
+    items<T>(tag?: T): PromiseLike<PromiseResult<DownloadItem[], T>>;
 }
 
 /**
