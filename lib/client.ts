@@ -18,7 +18,10 @@
 
 import * as dboy_contracts from './contracts';
 import * as dboy_downloads from './downloads';
+import * as dboy_libraries from './libraries';
 import * as dboy_objects from './objects';
+import * as FS from 'fs';
+import * as Path from 'path';
 
 declare const Promise: PromiseConstructorLike;
 
@@ -26,8 +29,26 @@ declare const Promise: PromiseConstructorLike;
  * A client instance.
  */
 export class Client extends dboy_objects.CommonEventObjectBase implements dboy_contracts.Client {
+    protected _config: dboy_contracts.ClientConfig;
     protected _downloads: dboy_contracts.DownloadList;
+    protected _library: dboy_contracts.FileLibrary;
     protected _state = dboy_contracts.CLIENT_STATE_STOPPED;
+
+    /**
+     * Initializes a new instance of that class.
+     * 
+     * @param {dboy_contracts.ClientConfig} [cfg] The configuration to use.
+     */
+    constructor(cfg?: dboy_contracts.ClientConfig) {
+        super();
+
+        this.updateConfig(cfg);
+    }
+
+    /* @inheritdoc */
+    public get config(): dboy_contracts.ClientConfig {
+        return this._config;
+    }
 
     /* @inheritdoc */
     public downloads<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.DownloadList, T>> {
@@ -37,7 +58,7 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
             let completed = (err?: any) => {
                 if (err) {
                     reject(<dboy_contracts.ErrorContext<T>>{
-                        category: 'client.requestdownloadlist',
+                        category: 'client.downloads',
                         code: 1,
                         error: err,
                         message: '' + err,
@@ -54,121 +75,102 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
             };
 
             try {
-                if (!me._downloads) {
-                    // not initialized yet
-                    let list = new dboy_downloads.DownloadList(me);
+                let tempDir = me.config.folders.temp;
+                if (!Path.isAbsolute(tempDir)) {
+                    tempDir = Path.join(process.cwd(), tempDir);
+                }
 
-                    me.once(dboy_contracts.EVENT_NAME_DOWNLOAD_LIST_INITIALIZED, (args: dboy_contracts.DownloadInitializedEventArguments) => {
-                        if (args.error) {
-                            completed(args.error);
+                let checkIfDirectory = () => {
+                    FS.lstat(tempDir, (err, stats) => {
+                        if (err) {
+                            completed(err);
+                            return;
                         }
-                        else {
+
+                        if (stats.isDirectory()) {
+                            me._downloads = new dboy_downloads.DownloadList(me, tempDir);
                             completed();
                         }
+                        else {
+                            let err = new Error(`'${tempDir}' is NO directory!`);
+                            completed(err);
+                        }
                     });
+                };
 
-                    let initMock = (dl: dboy_downloads.DownloadItem) => {
-                        let timeout: NodeJS.Timer = null;
-                        let shutdown = () => {
-                            let t = timeout;
-                            timeout = null;
+                let getRealPath = () => {
+                    FS.realpath(tempDir, (err, resolvedPath) => {
+                        if (err) {
+                            completed(err);
+                            return;
+                        }
 
-                            if (null !== t) {
-                                clearTimeout(t);
-                            }
-                        };
+                        tempDir = resolvedPath;
+                        checkIfDirectory();
+                    });
+                }
 
-                        dl.onPropertyChanged((sender, e) => {
-                            switch (e.propertyName) {
-                                case 'isDisposed':
-                                    shutdown();
-                                    break;
-                            }
-                        });
+                let createNewList = () => {
+                    FS.exists(tempDir, (exists) => {
+                        if (!exists) {
+                            FS.mkdir(tempDir, (err) => {
+                                if (err) {
+                                    completed(err);
+                                    return;
+                                }
 
-                        timeout = setInterval(() => {
-                            if (null === timeout) {
-                                return;
-                            }
+                                getRealPath();
+                            });
+                        }
+                        else {
+                            getRealPath();
+                        }
+                    });
+                }
 
-                            if (dl.isDisposed) {
-                                shutdown();
-                                return;
-                            }
+                if (!me._downloads) {
+                    createNewList();
+                }
+                else {
+                    completed();
+                }
+            }
+            catch (e) {
+                completed(e);
+            }
+        });
+    }
 
-                            let lastBytesReceived = dl.totalBytesReceived;
-                            let lastSources = dl.sources;
+    /* @inheritdoc */
+    public library<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.FileLibrary, T>> {
+        let me = this;
+        
+        return new Promise((resolve, reject) => {
+            let completed = (err?: any) => {
+                if (err) {
+                    reject(<dboy_contracts.ErrorContext<T>>{
+                        category: 'client.libary',
+                        error: err,
+                        tag: tag,
+                    });
+                }
+                else {
+                    resolve(<dboy_contracts.PromiseResult<dboy_contracts.FileLibrary, T>>{
+                        result: me._library,
+                        tag: tag,
+                    });
+                }
+            };
 
-                            let newSources = lastSources + Math.ceil(20 * Math.random()) - 10;
-                            if (newSources < 0) {
-                                newSources = 0;
-                            }
-                            
-                            let newBytesReceived = lastBytesReceived + 81920;
-                            if (newBytesReceived > dl.size) {
-                                newBytesReceived = dl.size;
-                            }
-
-                            if (newBytesReceived == dl.size) {
-                                shutdown();
-                            }
-                            
-                            if (newBytesReceived != lastBytesReceived) {
-                                dl._totalBytesReceived = newBytesReceived;
-
-                                dl.raisePropertyChanged('totalBytesReceived');
-                            }
-                            if (newSources != lastSources) {
-                                dl._sources = newSources;
-
-                                dl.raisePropertyChanged('sources');
-                            }
-                        }, 1000);
-                    };
-
-                    let newDownloadItem: dboy_downloads.DownloadItem;
-
-                    newDownloadItem = new dboy_downloads.DownloadItem(list);
-                    newDownloadItem._totalBytesReceived = 0;
-                    newDownloadItem._fileName = 'Tears go by.mp3';
-                    newDownloadItem._size = 1987654;
-                    newDownloadItem._sources = 1000;
-                    list._ITEMS.push(newDownloadItem);
-
-                    newDownloadItem = new dboy_downloads.DownloadItem(list);
-                    newDownloadItem._totalBytesReceived = 0;
-                    newDownloadItem._fileName = 'PB_DE_062016_0001.jpg';
-                    newDownloadItem._size = 234567;
-                    newDownloadItem._sources = 54;
-                    list._ITEMS.push(newDownloadItem);
-
-                    newDownloadItem = new dboy_downloads.DownloadItem(list);
-                    newDownloadItem._totalBytesReceived = 0;
-                    newDownloadItem._fileName = 'TWD - S0701.mp4';
-                    newDownloadItem._size = 345678901;
-                    newDownloadItem._sources = 666;
-                    list._ITEMS.push(newDownloadItem);
-
-                    for (let i = 0; i < list._ITEMS.length; i++) {
-                        initMock(<dboy_downloads.DownloadItem>list._ITEMS[i]);
-                    }
-
-                    me._downloads = list;
-
-                    me.raiseEvent(dboy_contracts.EVENT_NAME_DOWNLOAD_LIST_INITIALIZED,
-                                  {
-                                      list: list,
-                                  });
+            try {
+                if (!me._library) {
+                    me._library = new dboy_libraries.FileLibrary(me,
+                                                                 process.cwd());
                 }
 
                 completed();
             }
             catch (e) {
-                me.raiseEvent(dboy_contracts.EVENT_NAME_DOWNLOAD_LIST_INITIALIZED,
-                              {
-                                  error: e,
-                              });
-
                 completed(e);
             }
         });
@@ -284,6 +286,45 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
                     break;
             }
         });
+    }
+
+    /**
+     * Updates configuration.
+     * 
+     * @param {dboy_contracts.ClientConfig} [cfg] The configuration to update.
+     */
+    protected updateConfig(cfg?: dboy_contracts.ClientConfig) {
+        if (!cfg) {
+            cfg = {};
+        }
+
+        if (!cfg.folders) {
+            cfg.folders = {};
+        }
+
+        if (!cfg.folders.shares) {
+            cfg.folders.shares = [];
+        }
+
+        cfg.folders.shares = 
+            cfg.folders.shares
+                       .map(x => x ? ('' + x).trim() : '')
+                       .filter(x => x ? true : false);
+
+        // remove duplicate elements
+        cfg.folders.shares =
+            cfg.folders.shares
+                       .filter((x, pos) => cfg.folders.shares.indexOf(x) == pos);
+
+        if (cfg.folders.shares.length < 1) {
+            cfg.folders.shares.push('./shares');
+        }
+
+        if (!cfg.folders.temp) {
+            cfg.folders.temp = './temp';
+        }
+
+        this._config = cfg;
     }
 
     /* @inheritdoc */

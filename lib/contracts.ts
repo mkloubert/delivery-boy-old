@@ -60,6 +60,11 @@ export const EVENT_NAME_PROPERTY_CHANGED = 'propertychanged';
  */
 export interface Client extends NotifyPropertyChanged {
     /**
+     * Gets the underlying configuration.
+     */
+    config: ClientConfig;
+
+    /**
      * Requests the download list.
      * 
      * @param {T} [tag] An optional object / value for the invocation.
@@ -67,6 +72,15 @@ export interface Client extends NotifyPropertyChanged {
      * @return {PromiseLike<PromiseResult<DownloadList, T>>} The promise.
      */
     downloads<T>(tag?: T): PromiseLike<PromiseResult<DownloadList, T>>;
+
+    /**
+     * Requests the file list.
+     * 
+     * @param {T} [tag] An optional object / value for the invocation.
+     * 
+     * @return {PromiseLike<PromiseResult<FileLibrary, T>>} The promise.
+     */
+    library<T>(tag?: T): PromiseLike<PromiseResult<FileLibrary, T>>;
 
     /**
      * Starts the client.
@@ -109,6 +123,26 @@ export interface Client extends NotifyPropertyChanged {
      * Gets the current client state.
      */
     state: number;
+}
+
+/**
+ * Desceibes config data for a client.
+ */
+export interface ClientConfig {
+    /**
+     * Folders
+     */
+    folders?: {
+        /**
+         * List of share folders.
+         */
+        shares?: string[],
+
+        /**
+         * Temp folder.
+         */
+        temp?: string;
+    }
 }
 
 /**
@@ -174,6 +208,16 @@ export interface DownloadItem extends Disposable, NotifyPropertyChanged {
  * Describes a download list.
  */
 export interface DownloadList extends ClientObject, Disposable {
+    /**
+     * Adds a new download by link.
+     * 
+     * @param {string} link The link.
+     * @param {T} [tag] An optional object / value for the invocation.
+     * 
+     * @return {PromiseLike<PromiseResult<DownloadItem[], T>>} The promise.
+     */
+    addByLink<T>(link: string, tag?: T): PromiseLike<PromiseResult<DownloadItem, T>>;
+
     /**
      * Gets the list of download items.
      * 
@@ -266,6 +310,54 @@ export interface EventObject {
 }
 
 /**
+ * Describes a library of files.
+ */
+export interface FileLibrary extends ClientObject {
+    /**
+     * Requests all collections of that library.
+     * 
+     * @param {T} [tag] An optional object / value for the invocation.
+     * 
+     * @return {PromiseLike<PromiseResult<FileLibraryCollection[], T>>} The promise.
+     */
+    collections<T>(tag?: T): PromiseLike<PromiseResult<FileLibraryCollection[], T>>;
+}
+
+/**
+ * Describes collection inside a file library.
+ */
+export interface FileLibraryCollection {
+    /**
+     * Requests all items of that collection.
+     * 
+     * @param {T} [tag] An optional object / value for the invocation.
+     * 
+     * @return {PromiseLike<PromiseResult<FileLibraryCollectionItem[], T>>} The promise.
+     */
+    items<T>(tag?: T): PromiseLike<PromiseResult<FileLibraryCollectionItem[], T>>;
+
+    /**
+     * Gets the underlying library.
+     */
+    library: FileLibrary;
+}
+
+/**
+ * Describes an item of a collection inside a file library.
+ */
+export interface FileLibraryCollectionItem {
+    /**
+     * Gets the underlying collection.
+     */
+    collection: FileLibraryCollection;
+
+    /**
+     * Gets the name of the item.
+     */
+    name: string;
+}
+
+/**
  * Describes an object that notifies on property change.
  */
 export interface NotifyPropertyChanged extends EventObject {
@@ -283,6 +375,11 @@ export interface NotifyPropertyChanged extends EventObject {
  * Describes a promise result.
  */
 export interface PromiseResult<TResult, TTag> {
+    /**
+     * A code that describes the result.
+     */
+    code?: number;
+
     /**
      * The result object.
      */

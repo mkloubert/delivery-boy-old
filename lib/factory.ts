@@ -20,10 +20,11 @@
 import * as dboy_client from './client';
 import * as dboy_contracts from './contracts';
 
+declare const Promise: PromiseConstructorLike;
 
 /**
  * Creates a new client instance.
  */
-export function createClient(): dboy_contracts.Client {
-    return new dboy_client.Client();
+export function createClient<T>(cfg?: dboy_contracts.ClientConfig, tag?: T): dboy_contracts.Client {
+    return new dboy_client.Client(cfg);
 }
