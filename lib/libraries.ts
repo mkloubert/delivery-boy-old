@@ -35,6 +35,9 @@ export class FileLibrary extends dboy_objects.CommonEventObjectBase implements d
      * Stores the underlying collections.
      */
     protected _collections: dboy_contracts.FileLibraryCollection[];
+    /**
+     * Stores the working directory.
+     */
     protected readonly _WORK_DIR: string;
 
     /**
