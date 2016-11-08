@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import * as Crypto from 'crypto';
 import * as dboy_contracts from './contracts';
 import * as dboy_objects from './objects';
 import * as FS from 'fs';
@@ -267,6 +268,18 @@ export class FileLibraryCollectionItem extends dboy_objects.CommonEventObjectBas
      * Stores the path to the underlying file.
      */
     protected readonly _FILE: string;
+    /**
+     * Stores the last hash.
+     */
+    protected _hash: dboy_contracts.Hash;
+    /**
+     * Stores the last known "last change" timestamp.
+     */
+    protected _lastChange: Date = null;
+    /**
+     * Stores the last known file size.
+     */
+    protected _size: number = null;
 
     /**
      * Initializes a new instance of that class.
@@ -287,6 +300,113 @@ export class FileLibraryCollectionItem extends dboy_objects.CommonEventObjectBas
         return this._COLLECTION;
     }
 
+    /* @inheritdoc */
+    public hash(callback: (err?: any, hash?: dboy_contracts.Hash) => void): void {
+        let me = this;
+
+        let completed = (err?: any) => {
+            if (err) {
+                callback(err);
+            }
+            else {
+                callback(null, me._hash);
+            }
+        };
+
+        try {
+            FS.open(me._FILE, 'r', (err, fd) => {
+                if (err) {
+                    completed(err);
+                    return;
+                }
+
+                let closeFile = (err?: any) => {
+                    FS.close(fd, () => {
+                        completed(err);
+                    });
+                };
+
+                let buff = Buffer.alloc(9728000);
+                let hashOfChunks = Crypto.createHash('sha256');
+                let hashNext: () => void;
+                hashNext = () => {
+                    FS.read(fd, buff, 0, buff.length, null, (err, bytesRead, buffer) => {
+                        if (err) {
+                            closeFile(err);
+                            return;
+                        }
+
+                        if (bytesRead < 1) {
+                            me._hash.hash = hashOfChunks.digest("hex");
+
+                            closeFile();
+                            return;
+                        }
+
+                        let chunk = Buffer.alloc(bytesRead);
+                        buffer.copy(chunk, 0, 0, chunk.length - 1);
+
+                        let chunkHash = {
+                            hash: Crypto.createHash('sha256').update(chunk).digest("hex").toLowerCase().trim(),
+                            size: chunk.length,
+                        };
+                        hashOfChunks = hashOfChunks.update(chunkHash.hash);
+
+                        me._hash.chunks.push(chunkHash);
+
+                        hashNext();
+                    });
+                };
+
+                let checkFileForChange = () => {
+                    FS.lstat(me._FILE, (err, stats) => {
+                        if (err) {
+                            completed(err);
+                            return;
+                        }
+
+                        let hashAgain = true;
+
+                        // already hashed?
+                        if (me._hash) {
+                            // now check if last write time and
+                            // file size are available
+                            if ((me._lastChange !== null) && (me._size !== null)) {
+                                // now check if timestamp and filesize are
+                                // different from stats
+                                hashAgain = (me._lastChange.getTime() != stats.ctime.getTime()) ||
+                                            (me._size != stats.size);
+                            }
+                        }
+
+                        if (hashAgain) {
+                            me._lastChange = stats.ctime;
+                            me._size = stats.size;
+
+                            me._hash = {
+                                hash: null,
+                                chunks: [],
+                                toString: function(): string {
+                                    return this.hash;
+                                }
+                            };
+
+                            hashNext();
+                        }
+                        else {
+                            completed();
+                        }
+                    });
+                };
+
+                checkFileForChange();
+            });
+        }
+        catch (e) {
+            completed(e);
+        }
+    }
+
     /**
      * Gets the path to the underlying file.
      */
@@ -297,5 +417,20 @@ export class FileLibraryCollectionItem extends dboy_objects.CommonEventObjectBas
     /* @inheritdoc */
     public get name(): string {
         return Path.basename(this.file);
+    }
+
+    /* @inheritdoc */
+    public url(callback: (err?: any, url?: string) => void): void {
+        let me = this;
+        
+        this.hash((err, hash) => {
+            if (err) {
+                callback(err);
+            }
+            else {
+                callback(null,
+                         `dboy://|file|${encodeURIComponent(Path.basename(me._FILE))}|${me._size}|${hash}|/`);
+            }
+        });
     }
 }

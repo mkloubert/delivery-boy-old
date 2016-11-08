@@ -289,7 +289,7 @@ export interface FileLibraryCollection {
 /**
  * Describes an item of a collection inside a file library.
  */
-export interface FileLibraryCollectionItem {
+export interface FileLibraryCollectionItem extends Hashable, Linkable {
     /**
      * Gets the underlying collection.
      */
@@ -299,6 +299,53 @@ export interface FileLibraryCollectionItem {
      * Gets the name of the item.
      */
     name: string;
+}
+
+/**
+ * Describes a hash.
+ */
+export interface Hash {
+    /**
+     * List of chunks.
+     */
+    chunks?: {
+        /**
+         * The hash. of the chunk.
+         */
+        hash: string;
+
+        /**
+         * The size of the chunk.
+         */
+        size: number;
+    }[];
+
+    /**
+     * The full hash.
+     */
+    hash: string;
+}
+
+/**
+ * Describes an object that can be hashed.
+ */
+export interface Hashable {
+    /**
+     * Computes a hash.
+     * 
+     * @param {Function} callback The result callback.
+     */
+    hash(callback: (err?: any, hash?: Hash) => void): void;
+}
+
+/**
+ * Describes an object that can have a link.
+ */
+export interface Linkable {
+    /**
+     * Requests the URI of the object.
+     */
+    url(callback: (err?: any, url?: string) => void): void;
 }
 
 /**
