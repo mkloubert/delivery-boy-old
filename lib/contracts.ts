@@ -39,6 +39,14 @@ export const CLIENT_STATE_STOPPING = 3;
 export const CLIENT_STATE_STOPPED = 4;
 
 /**
+ * 'Connected' event
+ */
+export const EVENT_NAME_CONNECTED = 'connected';
+/**
+ * 'Connecting' event
+ */
+export const EVENT_NAME_CONNECTING = 'connecting';
+/**
  * 'Disposed' event
  */
 export const EVENT_NAME_DISPOSED = 'disposed';
@@ -65,6 +73,16 @@ export interface Client extends NotifyPropertyChanged {
     config: ClientConfig;
 
     /**
+     * Connects to a remote client.
+     * 
+     * @param {string} host The host name / address.
+     * @param {number} port The TCP port.
+     * @param {Function} callback The result callback.
+     */
+    connectTo(host: string, port: number,
+              callback: (err: any, conn?: ClientConnection) => void): void;
+
+    /**
      * Requests the download list.
      * 
      * @param {Function} [callback] The result callback.
@@ -77,6 +95,24 @@ export interface Client extends NotifyPropertyChanged {
      * @param {Function} [callback] The result callback.
      */
     library(callback: (err: any, lib?: FileLibrary) => void): void;
+
+    /**
+     * Registers a handler for a 'connected' event.
+     * 
+     * @param {ClientConnectionEstablishedEventHandler} handler The handler to register.
+     * 
+     * @chainable
+     */
+    onConnected(handler: ClientConnectionEstablishedEventHandler): Client;
+
+    /**
+     * Registers a handler for a 'connecting' event.
+     * 
+     * @param {ClientConnectionEstablishedEventHandler} handler The handler to register.
+     * 
+     * @chainable
+     */
+    onConnecting(handler: ClientConnectingEventHandler): Client;
 
     /**
      * Starts the client.
@@ -114,6 +150,63 @@ export interface Client extends NotifyPropertyChanged {
 }
 
 /**
+ * Arguments for an event when a remote machine tries to connect.
+ */
+export interface ClientConnectingEventArguments extends EventArguments {
+    /**
+     * Gets or sets if connection should be closed or not.
+     */
+    close: boolean;
+
+    /**
+     * Gets the underlying connection.
+     */
+    connection: Connection;
+}
+
+/**
+ * Arguments for an event when a client connection has been established.
+ */
+export interface ClientConnectionEstablishedEventArguments extends EventArguments {
+    /**
+     * Gets the new connection.
+     */
+    connection: ClientConnection;
+}
+
+/**
+ * A client connection.
+ */
+export interface ClientConnection {
+    /**
+     * Closes the connection.
+     * 
+     * @param {Function} [callback] The result callback.
+     */
+    close(callback?: (err: any) => void): void;
+
+    /**
+     * Gets the underlying "raw" connection.
+     */
+    connection: Connection;
+
+    /**
+     * Reads a message.
+     * 
+     * @param {Function} [callback] The result callback.
+     */
+    read<T>(callback: (err: any, data?: T) => void): void;
+
+    /**
+     * Writes a message.
+     * 
+     * @param {T} data The message to write.
+     * @param {Function} [callback] The result callback.
+     */
+    write<T>(data: T, callback?: (err: any) => void): void;
+}
+
+/**
  * Desceibes config data for a client.
  */
 export interface ClientConfig {
@@ -130,7 +223,12 @@ export interface ClientConfig {
          * Temp folder.
          */
         temp?: string;
-    }
+    },
+
+    /**
+     * The port a client a should listen on.
+     */
+    port?: number;
 }
 
 /**
@@ -141,6 +239,34 @@ export interface ClientObject {
      * Gets the underlying client.
      */
     client: Client;
+}
+
+/**
+ * Describes a "raw" connection.
+ */
+export interface Connection {
+    /**
+     * Closes the connection.
+     * 
+     * @param {Function} [callback] The result callback.
+     */
+    close(callback?: (err: any) => void): void;
+
+    /**
+     * Reads data from the connection.
+     * 
+     * @param {number} bytesToRead The number of bytes to read.
+     * @param {Function} callback The result callback.
+     */
+    read(bytesToRead: number, callback: (err: any, buffer?: Buffer) => void): void;
+
+    /**
+     * Writes data to the connection.
+     * 
+     * @param {Buffer} buffer The data to write.
+     * @param {Function} [callback] The result callback.
+     */
+    write(buffer: Buffer, callback?: (err: any) => void): void;
 }
 
 /**
@@ -349,6 +475,16 @@ export interface Linkable {
 }
 
 /**
+ * Describes a message.
+ */
+export interface Message {
+    /**
+     * Type of the message.
+     */
+    type: number;
+}
+
+/**
  * Describes an object that notifies on property change.
  */
 export interface NotifyPropertyChanged extends EventObject {
@@ -373,10 +509,18 @@ export interface PropertyChangedEventArguments {
 }
 
 /**
- * Descibes a general event handler.
+ * Describes a 'client connection established' event handler.
+ */
+export type ClientConnectionEstablishedEventHandler = (sender: any, args: ClientConnectionEstablishedEventArguments) => void;
+/**
+ * Describes a 'client connecting' event handler.
+ */
+export type ClientConnectingEventHandler = (sender: any, args: ClientConnectingEventArguments) => void;
+/**
+ * Describes a general event handler.
  */
 export declare type EventHandler = (sender: any, args: EventArguments) => void;
 /**
- * Descibes a property changed event handler.
+ * Describes a property changed event handler.
  */
 export declare type PropertyChangedEventHandler = (sender: any, args: PropertyChangedEventArguments) => void;

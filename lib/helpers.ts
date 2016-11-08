@@ -17,3 +17,69 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import * as dboy_contracts from './contracts';
+import * as Net from 'net';
+
+/**
+ * Does a forced line break.
+ * 
+ * @param {string} str The input string.
+ * @param {number} maxLen The maximum length of a line.
+ * @param {string} nl The string that represents a new line.
+ * 
+ * @return {string} The output string.
+ */
+export function lineBreak(str: string, maxLen: number, nl = "\n"): string {
+    let res = '';
+    let i = 0;
+    while (i + maxLen < str.length) {
+        res += str.substring(i, i + maxLen) + nl;
+        i += maxLen;
+    }
+
+    return res + str.substring(i, str.length);
+};
+
+/**
+ * Creates a random buffer.
+ * 
+ * @param {number} size The size of the result string.
+ * 
+ * @return {Buffer} The random buffer.
+ */
+export function randomBuffer(size: number): Buffer {
+    let result = Buffer.alloc(size);
+    for (let i = 0; i < size; i++) {
+        result.writeUInt8(Math.floor(Math.random() * 256),
+                          i);
+    }
+
+    return result;
+}
+
+/**
+ * Reads a number of bytes from a socket.
+ * 
+ * @param {Net.Socket} socket The socket.
+ * @param {Number} bytesToRead The amount of bytes to read.
+ * @param {Function} callback The result callback.
+ */
+export function readSocket(socket: Net.Socket, bytesToRead: number,
+                           callback: (err: any, buffer?: Buffer) => void): void {
+
+    try {
+        let buff: Buffer = socket.read(bytesToRead);
+        if (null === buff) {
+            socket.once('readable', function() {
+                readSocket(socket, bytesToRead, (err, buffer) => {
+                    callback(err, buffer);
+                });
+            });
+        }
+        else {
+            callback(null, buff);
+        }
+    }
+    catch (e) {
+        callback(e);
+    }
+}

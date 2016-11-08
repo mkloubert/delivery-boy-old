@@ -16,15 +16,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import * as dboy_factory from '../lib/factory';
 
-import * as dboy_client from './client/client';
-import * as dboy_contracts from './contracts';
 
-/**
- * Creates a new client instance.
- * 
- * @param {dboy_contracts.ClientConfig} [cfg] The configuration for the client.
- */
-export function createClient(cfg?: dboy_contracts.ClientConfig): dboy_contracts.Client {
-    return new dboy_client.Client(cfg);
-}
+let client = dboy_factory.createClient({
+    port: 5979,
+});
+
+client.start((err) => {
+    if (err) {
+        console.log('START ERROR: ' + err.stack);
+    }
+    else {
+        client.connectTo('127.0.0.1', 23979, (err, conn) => {
+            if (err) {
+                console.log('CONNECTION ERROR: ' + err.stack);
+            }
+            else {
+                console.log('Connected');
+            }
+        });
+    }
+});

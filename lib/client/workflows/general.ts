@@ -16,15 +16,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-import * as dboy_client from './client/client';
-import * as dboy_contracts from './contracts';
+import * as dboy_contracts from '../../contracts';
 
 /**
- * Creates a new client instance.
+ * Sends an "OK" message to a remote client.
  * 
- * @param {dboy_contracts.ClientConfig} [cfg] The configuration for the client.
+ * @param {dboy_contracts.ClientConnection} conn The underlying connection.
+ * @param {Function} [callback] The result callback.
  */
-export function createClient(cfg?: dboy_contracts.ClientConfig): dboy_contracts.Client {
-    return new dboy_client.Client(cfg);
+export function sendOK(conn: dboy_contracts.ClientConnection,
+                       callback?: (err: any) => void) {
+    
+    let msg = <dboy_contracts.Message>{
+        type: 0,
+    };
+
+    conn.write(msg, (err) => {
+        if (callback) {
+            callback(err);
+        }
+    });
 }

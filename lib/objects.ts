@@ -19,8 +19,6 @@
 import * as dboy_contracts from './contracts';
 import * as Events from 'events';
 
-declare const Promise: PromiseConstructorLike;
-
 /**
  * A basic object that can handle events.
  */

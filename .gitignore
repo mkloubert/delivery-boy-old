@@ -8,3 +8,5 @@
 /pushall.sh
 /shares
 /temp
+/test/*.map
+/test/*.js

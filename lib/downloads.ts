@@ -21,8 +21,6 @@ import * as dboy_objects from './objects';
 import * as FS from 'fs';
 import * as Path from 'path';
 
-declare const Promise: PromiseConstructorLike;
-
 /**
  * Implementation of a download list.
  */
