@@ -69,35 +69,35 @@ export interface Client extends NotifyPropertyChanged {
      * 
      * @param {Function} [callback] The result callback.
      */
-    downloads(callback: (err?: any, list?: DownloadList) => void): void;
+    downloads(callback: (err: any, list?: DownloadList) => void): void;
 
     /**
      * Requests the file list.
      * 
      * @param {Function} [callback] The result callback.
      */
-    library(callback: (err?: any, lib?: FileLibrary) => void): void;
+    library(callback: (err: any, lib?: FileLibrary) => void): void;
 
     /**
      * Starts the client.
      * 
      * @param {Function} [callback] The result callback.
      */
-    start(callback?: (err?: any) => void): void;
+    start(callback?: (err: any) => void): void;
 
     /**
      * Stops the client.
      * 
      * @param {Function} [callback] The result callback.
      */
-    stop(callback?: (err?: any) => void): void;
+    stop(callback?: (err: any) => void): void;
 
     /**
      * Toggles the state of the client.
      * 
      * @param {Function} [callback] The result callback.
      */
-    toggle(callback?: (err?: any) => void): void;
+    toggle(callback?: (err: any) => void): void;
 
     /**
      * Invokes a logic for the case when the client reached 'running' or 'stopped'
@@ -105,7 +105,7 @@ export interface Client extends NotifyPropertyChanged {
      * 
      * @param {Function} [callback] The result callback.
      */
-    whenRunningOrStopped(callback: (err?: any) => void): void;
+    whenRunningOrStopped(callback: (err: any) => void): void;
 
     /**
      * Gets the current client state.
@@ -152,7 +152,7 @@ export interface Disposable {
      * 
      * @param {Function} [callback] The result callback.
      */
-    dispose(callback?: (err?: any) => void): void;
+    dispose(callback?: (err: any) => void): void;
 
     /**
      * Gets if the object has already bee disposed or not.
@@ -201,14 +201,14 @@ export interface DownloadList extends ClientObject, Disposable {
      * @param {Function} [callback] The result callback.
      */
     addByLink(link: string,
-              callback?: (err?: any, newItem?: DownloadItem) => void): void;
+              callback?: (err: any, newItem?: DownloadItem) => void): void;
 
     /**
      * Gets the list of download items.
      * 
      * @param {Function} callback The result callback.
      */
-    items(callback: (err?: any, newItem?: DownloadItem[]) => void): void;
+    items(callback: (err: any, newItem?: DownloadItem[]) => void): void;
 }
 
 /**
@@ -266,7 +266,7 @@ export interface FileLibrary extends ClientObject {
      * 
      * @param {Function} callback The result callback.
      */
-    collections(callback: (err?: any, items?: FileLibraryCollection[]) => void): void;
+    collections(callback: (err: any, items?: FileLibraryCollection[]) => void): void;
 }
 
 /**
@@ -278,7 +278,7 @@ export interface FileLibraryCollection {
      * 
      * @param {Function} callback The result callback.
      */
-    items(callback: (err?: any, items?: FileLibraryCollectionItem[]) => void): void;
+    items(callback: (err: any, items?: FileLibraryCollectionItem[]) => void): void;
 
     /**
      * Gets the underlying library.
@@ -335,7 +335,7 @@ export interface Hashable {
      * 
      * @param {Function} callback The result callback.
      */
-    hash(callback: (err?: any, hash?: Hash) => void): void;
+    hash(callback: (err: any, hash?: Hash) => void): void;
 }
 
 /**
@@ -345,7 +345,7 @@ export interface Linkable {
     /**
      * Requests the URI of the object.
      */
-    url(callback: (err?: any, url?: string) => void): void;
+    url(callback: (err: any, url?: string) => void): void;
 }
 
 /**

@@ -35,12 +35,12 @@ export abstract class CommonEventObjectBase implements dboy_contracts.Disposable
     protected _isDisposed = false;
 
     /* @inheritdoc */
-    public dispose(callback?: (err?: any) => void): void {
+    public dispose(callback?: (err: any) => void): void {
         let me = this;
 
         let resolve = () => {
             if (callback) {
-                callback();
+                callback(null);
             }
         };
 
@@ -126,13 +126,13 @@ export abstract class CommonEventObjectBase implements dboy_contracts.Disposable
         // dummy by default
     }
 
-    protected invokeCallback(callback?: (err?: any) => void, err?: any) {
+    protected invokeCallback(callback?: (err: any) => void, err?: any) {
         if (callback) {
             if (err) {
                 callback(err);
             }
             else {
-                callback();
+                callback(null);
             }
         }
     }

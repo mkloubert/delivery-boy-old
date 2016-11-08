@@ -61,7 +61,7 @@ export class FileLibrary extends dboy_objects.CommonEventObjectBase implements d
     }
 
     /* @inheritdoc */
-    public collections(callback: (err?: any, items?: dboy_contracts.FileLibraryCollection[]) => void): void {
+    public collections(callback: (err: any, items?: dboy_contracts.FileLibraryCollection[]) => void): void {
         let me = this;
 
         let completed = (err?: any) => {
@@ -192,7 +192,7 @@ export class FileLibraryCollection extends dboy_objects.CommonEventObjectBase im
     }
     
     /* @inheritdoc */
-    public items(callback: (err?: any, items?: dboy_contracts.FileLibraryCollectionItem[]) => void): void {
+    public items(callback: (err: any, items?: dboy_contracts.FileLibraryCollectionItem[]) => void): void {
         let me = this;
         
         let completed = (err?: any) => {
@@ -301,7 +301,7 @@ export class FileLibraryCollectionItem extends dboy_objects.CommonEventObjectBas
     }
 
     /* @inheritdoc */
-    public hash(callback: (err?: any, hash?: dboy_contracts.Hash) => void): void {
+    public hash(callback: (err: any, hash?: dboy_contracts.Hash) => void): void {
         let me = this;
 
         let completed = (err?: any) => {
@@ -420,7 +420,7 @@ export class FileLibraryCollectionItem extends dboy_objects.CommonEventObjectBas
     }
 
     /* @inheritdoc */
-    public url(callback: (err?: any, url?: string) => void): void {
+    public url(callback: (err: any, url?: string) => void): void {
         let me = this;
         
         this.hash((err, hash) => {

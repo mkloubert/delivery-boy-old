@@ -27,8 +27,17 @@ declare const Promise: PromiseConstructorLike;
  * Implementation of a download list.
  */
 export class DownloadList extends dboy_objects.CommonEventObjectBase implements dboy_contracts.DownloadList {
+    /**
+     * Stores the underlying client.
+     */
     protected readonly _CLIENT: dboy_contracts.Client;
+    /**
+     * Stores the underlying directory.
+     */
     protected readonly _DIR: string;
+    /**
+     * Stores the list of items.
+     */
     protected _items: dboy_contracts.DownloadItem[];
 
     /**
@@ -46,7 +55,7 @@ export class DownloadList extends dboy_objects.CommonEventObjectBase implements 
 
     /* @inheritdoc */
     public addByLink(link: string,
-                     callback?: (err?: any, newItem?: dboy_contracts.DownloadItem) => void): void {
+                     callback?: (err: any, newItem?: dboy_contracts.DownloadItem) => void): void {
         
         let me = this;
 
@@ -205,7 +214,7 @@ export class DownloadList extends dboy_objects.CommonEventObjectBase implements 
     }
 
     /* @inheritdoc */
-    public items(callback: (err?: any, newItem?: dboy_contracts.DownloadItem[]) => void): void {
+    public items(callback: (err: any, newItem?: dboy_contracts.DownloadItem[]) => void): void {
         let me = this;
 
         let completed = (err?: any) => {
@@ -240,10 +249,10 @@ export class DownloadList extends dboy_objects.CommonEventObjectBase implements 
                             let metaFile = Path.join(me._DIR, match[1] + match[2] + match[3] + '.dbmeta');
                             if (FS.existsSync(metaFile)) {
                                 let newItem = new DownloadItem(me, 
-                                                                Path.join(me._DIR, __filename), metaFile);
+                                                               Path.join(me._DIR, __filename), metaFile);
                                 
                                 me._items
-                                    .push(newItem);
+                                  .push(newItem);
                             }
                         }
                         catch (e) {

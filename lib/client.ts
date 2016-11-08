@@ -51,7 +51,7 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
     }
 
     /* @inheritdoc */
-    public downloads(callback: (err?: any, list?: dboy_contracts.DownloadList) => void): void {
+    public downloads(callback: (err: any, list?: dboy_contracts.DownloadList) => void): void {
         let me = this;
 
         let completed = (err?: any) => {
@@ -130,7 +130,7 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
     }
 
     /* @inheritdoc */
-    public library(callback: (err?: any, lib?: dboy_contracts.FileLibrary) => void): void {
+    public library(callback: (err: any, lib?: dboy_contracts.FileLibrary) => void): void {
         let me = this;
         
         let completed = (err?: any) => {
@@ -156,7 +156,7 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
     }
 
     /* @inheritdoc */
-    public start(callback?: (err?: any) => void): void {
+    public start(callback?: (err: any) => void): void {
         try {
             this._state = dboy_contracts.CLIENT_STATE_STARTING;
             this.raisePropertyChanged('state');
@@ -177,7 +177,7 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
     }
 
     /* @inheritdoc */
-    public stop(callback?: (err?: any) => void): void {
+    public stop(callback?: (err: any) => void): void {
         try {
             this._state = dboy_contracts.CLIENT_STATE_STOPPING;
             this.raisePropertyChanged('state');
@@ -193,7 +193,7 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
     }
 
     /* @inheritdoc */
-    public toggle(callback?: (err?: any) => void): void {
+    public toggle(callback?: (err: any) => void): void {
         try {
             let currentState = this.state;
             switch (currentState) {
@@ -256,7 +256,7 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
     }
 
     /* @inheritdoc */
-    public whenRunningOrStopped(callback: (err?: any) => void): void {
+    public whenRunningOrStopped(callback: (err: any) => void): void {
         try {
             let currentState = this.state;
             switch (currentState) {
