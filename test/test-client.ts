@@ -21,6 +21,14 @@ import * as dboy_factory from '../lib/factory';
 
 let client = dboy_factory.createClient({
     port: 5979,
+    security: {
+        passwords: {
+            size: 64,
+        },
+        rsa: {
+            keySize: 256,
+        }
+    }
 });
 
 client.start((err) => {

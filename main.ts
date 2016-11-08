@@ -114,7 +114,21 @@ app.on('activate', function () {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 
+//TODO: load from file
+let clientConfig = <dboy_contracts.ClientConfig>{
+  security: {
+    passwords: {
+      size: 64,
+    },
+    rsa: {
+      keySize: 2048,
+    }
+  }
+};
+
+let newClient = dboy_factory.createClient(clientConfig);
+
 (<any>global).sharedObj = {
-  client: dboy_factory.createClient(),
+  client: newClient,
   window: mainWindow,
 };

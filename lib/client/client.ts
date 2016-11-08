@@ -81,7 +81,7 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
     /* @inheritdoc */
     public connectTo(host: string, port: number,
                      callback: (err: any, conn?: dboy_contracts.ClientConnection) => void): void {
-        
+        let me = this;
 
         let socket: Net.Socket;
         let conn: dboy_contracts.ClientConnection;
@@ -140,7 +140,7 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
                             let key = new NodeRSA();
                             key.importKey(tempKey);
 
-                            let pwd = dboy_helpers.randomBuffer(48);
+                            let pwd = dboy_helpers.randomBuffer(me._config.security.passwords.size);
                             let encryptedPwd = key.encrypt(pwd);
                             
                             let encryptedPwdLength = Buffer.alloc(4);
@@ -486,10 +486,14 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
 
                         completed(err);
                     });
-                    newServer.listen(me._config.port, () => {
+                    newServer.listen(me._config.port, async () => {
                         try {
-                            let newKey = new NodeRSA();
-                            newKey.generateKeyPair(2048);
+                            let newKey = await dboy_helpers.runInBackground(() => {
+                                let key = new NodeRSA();
+                                key.generateKeyPair(me._config.security.rsa.keySize);
+
+                                return key;
+                            });
 
                             me._key = newKey;
                             me._server = newServer;
@@ -621,6 +625,14 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
                 temp: './temp'
             },
             port: 23979,
+            security: {
+                passwords: {
+                    size: 48,
+                },
+                rsa: {
+                    keySize: 2048,
+                },
+            }
         };
 
         if (!cfg) {
@@ -640,19 +652,35 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
                                    .filter(x => x ? true : false);
                 }
             }
+
+            if (cfg.security) {
+                if (cfg.security.passwords) {
+                    if (cfg.security.passwords.size) {
+                        newCfg.security.passwords.size =
+                            parseInt(('' + cfg.security.passwords.size).trim());
+                    }
+                }
+
+                if (cfg.security.rsa) {
+                    if (cfg.security.rsa.keySize) {
+                        newCfg.security.rsa.keySize =
+                            parseInt(('' + cfg.security.rsa.keySize).trim());
+                    }
+                }
+            }
         }
 
         // remove duplicate elements
         newCfg.folders.shares =
             newCfg.folders.shares
-                       .filter((x, pos) => newCfg.folders.shares.indexOf(x) == pos);
+                          .filter((x, pos) => newCfg.folders.shares.indexOf(x) == pos);
 
         if (newCfg.folders.shares.length < 1) {
             newCfg.folders.shares.push('./shares');  // default share folder
         }
 
         if (cfg.port) {
-            newCfg.port = cfg.port;
+            newCfg.port = parseInt(('' + cfg.port).trim());
         }
 
         this._config = newCfg;
@@ -690,7 +718,7 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
 /**
  * A crypted client connection.
  */
-export class CryptedClientConnection implements dboy_contracts.ClientConnection {
+export class CryptedClientConnection extends dboy_objects.CommonEventObjectBase implements dboy_contracts.ClientConnection {
     /**
      * Stores the underlying "raw" connection.
      */
@@ -707,8 +735,15 @@ export class CryptedClientConnection implements dboy_contracts.ClientConnection 
      * @param {Buffer} pwd The password.
      */
     constructor(conn: dboy_contracts.Connection, pwd: Buffer) {
+        super();
+
         this._CONN = conn;
         this._PWD = pwd;
+
+        let me = this;
+        this._CONN.once(dboy_contracts.EVENT_NAME_CLOSED, (args: dboy_contracts.EventArguments) => {
+            me.raiseEvent(dboy_contracts.EVENT_NAME_CLOSED, args);
+        });
     }
 
     /* @inheritdoc */
@@ -720,6 +755,12 @@ export class CryptedClientConnection implements dboy_contracts.ClientConnection 
     /* @inheritdoc */
     public get connection(): dboy_contracts.Connection {
         return this._CONN;
+    }
+
+    /* @inheritdoc */
+    public onClosed(handler: dboy_contracts.EventHandler): CryptedClientConnection {
+        return <CryptedClientConnection>this.on(dboy_contracts.EVENT_NAME_CLOSED,
+                                                handler);
     }
 
     /* @inheritdoc */

@@ -83,3 +83,26 @@ export function readSocket(socket: Net.Socket, bytesToRead: number,
         callback(e);
     }
 }
+
+/**
+ * Runs a task in background.
+ * 
+ * @param {Function} func The function to invoke.
+ * @param {any} {arg} An optional argument for the function.
+ * 
+ * @return {any} The result of the function.
+ */
+export function runInBackground<TResult, T>(func: (arg?: T) => TResult, arg?: T): Promise<TResult> {
+    return new Promise((resolve, reject) => {
+        //TODO: wrap with a background worker library
+        
+        try {
+            let result = func(arg);
+
+            resolve(result);
+        }
+        catch (e) {
+            reject(e);
+        }
+    });
+}

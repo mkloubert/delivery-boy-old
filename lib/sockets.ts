@@ -18,11 +18,12 @@
 
 import * as Net from 'net';
 import * as dboy_contracts from './contracts';
+import * as dboy_objects from './objects';
 
 /**
  * A socket connect.
  */
-export class SocketConnection implements dboy_contracts.Connection {
+export class SocketConnection extends dboy_objects.CommonEventObjectBase implements dboy_contracts.Connection {
     /**
      * Stores the underlying socket.
      */
@@ -34,7 +35,14 @@ export class SocketConnection implements dboy_contracts.Connection {
      * @param {Net.Socket} socket The underlying socket.
      */
     constructor(socket: Net.Socket) {
+        super();
+
         this._SOCKET = socket;
+
+        let me = this;
+        me._SOCKET.once('end', () => {
+            me.raiseEvent(dboy_contracts.EVENT_NAME_CLOSED);
+        });
     }
 
     /* @inheritdoc */
@@ -51,6 +59,12 @@ export class SocketConnection implements dboy_contracts.Connection {
         if (callback) {
             callback(err);
         }
+    }
+
+    /* @inheritdoc */
+    public onClosed(handler: dboy_contracts.EventHandler): SocketConnection {
+        return <SocketConnection>this.on(dboy_contracts.EVENT_NAME_CLOSED,
+                                         handler);
     }
 
     /* @inheritdoc */

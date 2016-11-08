@@ -39,6 +39,10 @@ export const CLIENT_STATE_STOPPING = 3;
 export const CLIENT_STATE_STOPPED = 4;
 
 /**
+ * 'Closed' event
+ */
+export const EVENT_NAME_CLOSED = 'closed';
+/**
  * 'Connected' event
  */
 export const EVENT_NAME_CONNECTED = 'connected';
@@ -177,7 +181,7 @@ export interface ClientConnectionEstablishedEventArguments extends EventArgument
 /**
  * A client connection.
  */
-export interface ClientConnection {
+export interface ClientConnection extends EventObject {
     /**
      * Closes the connection.
      * 
@@ -189,6 +193,15 @@ export interface ClientConnection {
      * Gets the underlying "raw" connection.
      */
     connection: Connection;
+
+    /**
+     * Registers a handler for a 'closed' event.
+     * 
+     * @param {EventHandler} handler The handler to register.
+     * 
+     * @chainable
+     */
+    onClosed(handler: EventHandler): ClientConnection;
 
     /**
      * Reads a message.
@@ -228,7 +241,29 @@ export interface ClientConfig {
     /**
      * The port a client a should listen on.
      */
-    port?: number;
+    port?: number,
+
+    /**
+     * Security options.
+     */
+    security?: {
+        /**
+         * Passwords for encrypted communication
+         */
+        passwords?: {
+            size?: number;
+        },
+
+        /**
+         * Password exchange via RSA.
+         */
+        rsa?: {
+            /**
+             * The key size in bits.
+             */
+            keySize?: number;
+        },
+    },
 }
 
 /**
@@ -244,13 +279,22 @@ export interface ClientObject {
 /**
  * Describes a "raw" connection.
  */
-export interface Connection {
+export interface Connection extends EventObject {
     /**
      * Closes the connection.
      * 
      * @param {Function} [callback] The result callback.
      */
     close(callback?: (err: any) => void): void;
+
+    /**
+     * Registers a handler for a 'closed' event.
+     * 
+     * @param {EventHandler} handler The handler to register.
+     * 
+     * @chainable
+     */
+    onClosed(handler: EventHandler): Connection;
 
     /**
      * Reads data from the connection.
