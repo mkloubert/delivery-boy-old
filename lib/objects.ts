@@ -35,29 +35,36 @@ export abstract class CommonEventObjectBase implements dboy_contracts.Disposable
     protected _isDisposed = false;
 
     /* @inheritdoc */
-    public dispose<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.Disposable, T>> {
+    public dispose(callback?: (err?: any) => void): void {
         let me = this;
 
-        return new Promise((resolve, reject) => {
-            try {
-                me.disposeInner(true,
-                                resolve, reject);
+        let resolve = () => {
+            if (callback) {
+                callback();
             }
-            catch (e) {
-                reject(<dboy_contracts.ErrorContext<T>>{
-                    category: 'dispose',
-                    code: 1,
-                    error: e,
-                    object: me,
-                    tag: tag,
-                });
+        };
+
+        let reject = (err: any) => {
+            if (callback) {
+                if (!err) {
+                    err = new Error("Failed");
+                }
+
+                callback(err);
             }
-        });
+        };
+
+        try {
+            me.disposeInner(true,
+                            resolve, reject);
+        }
+        catch (e) {
+            reject(e);
+        }
     }
 
-    private disposeInner<T>(disposing: boolean,
-                            resolve: (value?: {} | PromiseLike<{}>) => void, reject: (reason?: any) => void,
-                            tag?: T) {
+    private disposeInner(disposing: boolean,
+                         resolve: () => void, reject: (reason?: any) => void) {
         let me = this;
 
         if (disposing && this.isDisposed) {
@@ -81,25 +88,16 @@ export abstract class CommonEventObjectBase implements dboy_contracts.Disposable
                 me.raiseEvent(dboy_contracts.EVENT_NAME_DISPOSED);
             }
 
-            resolve(<dboy_contracts.PromiseResult<CommonEventObjectBase, T>>{
-                result: this,
-                tag: tag,
-            });
+            resolve();
         };
 
-        let rejectWrapper = (err: any) => {
+        let rejectWrapper = (reason: any) => {
             if (rejectInvoked || resolveInvoked) {
                 return;
             }
 
             rejectInvoked = true;
-            reject(<dboy_contracts.ErrorContext<T>>{
-                category: 'dispose',
-                code: 1,
-                error: err,
-                object: this,
-                tag: tag,
-            });
+            reject(reason);
         };
 
         if (disposing) {
@@ -108,7 +106,6 @@ export abstract class CommonEventObjectBase implements dboy_contracts.Disposable
 
         try {
             this.disposing(resolveWrapper, rejectWrapper,
-                           tag,
                            disposing);
         }
         catch (e) {
@@ -121,14 +118,23 @@ export abstract class CommonEventObjectBase implements dboy_contracts.Disposable
      * 
      * @param {Function} resolve The 'succeeded' callback.
      * @param {Function} reject The 'error' callback.
-     * @param {T} tag The optional value for the callbacks.
      * @param {boolean} disposing 'dispose' method was called or not.
      */
-    protected disposing<T>(resolve: () => void, reject: (reason: any) => void,
-                           tag: T,
-                           disposing: boolean) {
+    protected disposing(resolve: () => void, reject: (reason: any) => void,
+                        disposing: boolean) {
 
         // dummy by default
+    }
+
+    protected invokeCallback(callback?: (err?: any) => void, err?: any) {
+        if (callback) {
+            if (err) {
+                callback(err);
+            }
+            else {
+                callback();
+            }
+        }
     }
 
     /* @inheritdoc */

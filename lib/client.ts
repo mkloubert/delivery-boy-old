@@ -51,161 +51,124 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
     }
 
     /* @inheritdoc */
-    public downloads<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.DownloadList, T>> {
+    public downloads(callback: (err?: any, list?: dboy_contracts.DownloadList) => void): void {
         let me = this;
 
-        return new Promise((resolve, reject) => {
-            let completed = (err?: any) => {
-                if (err) {
-                    reject(<dboy_contracts.ErrorContext<T>>{
-                        category: 'client.downloads',
-                        code: 1,
-                        error: err,
-                        message: '' + err,
-                        object: me,
-                        tag: tag,
-                    });
-                }
-                else {
-                    resolve(<dboy_contracts.PromiseResult<dboy_contracts.DownloadList, T>>{
-                        result: me._downloads,
-                        tag: tag,
-                    });
-                }
+        let completed = (err?: any) => {
+            if (err) {
+                callback(err);
+            }
+            else {
+                callback(null, me._downloads);
+            }
+        };
+
+        try {
+            let tempDir = me.config.folders.temp;
+            if (!Path.isAbsolute(tempDir)) {
+                tempDir = Path.join(process.cwd(), tempDir);
+            }
+
+            let checkIfDirectory = () => {
+                FS.lstat(tempDir, (err, stats) => {
+                    if (err) {
+                        completed(err);
+                        return;
+                    }
+
+                    if (stats.isDirectory()) {
+                        me._downloads = new dboy_downloads.DownloadList(me, tempDir);
+                        completed();
+                    }
+                    else {
+                        let err = new Error(`'${tempDir}' is NO directory!`);
+                        completed(err);
+                    }
+                });
             };
 
-            try {
-                let tempDir = me.config.folders.temp;
-                if (!Path.isAbsolute(tempDir)) {
-                    tempDir = Path.join(process.cwd(), tempDir);
-                }
+            let getRealPath = () => {
+                FS.realpath(tempDir, (err, resolvedPath) => {
+                    if (err) {
+                        completed(err);
+                        return;
+                    }
 
-                let checkIfDirectory = () => {
-                    FS.lstat(tempDir, (err, stats) => {
-                        if (err) {
-                            completed(err);
-                            return;
-                        }
+                    tempDir = resolvedPath;
+                    checkIfDirectory();
+                });
+            }
 
-                        if (stats.isDirectory()) {
-                            me._downloads = new dboy_downloads.DownloadList(me, tempDir);
-                            completed();
-                        }
-                        else {
-                            let err = new Error(`'${tempDir}' is NO directory!`);
-                            completed(err);
-                        }
-                    });
-                };
+            let createNewList = () => {
+                FS.exists(tempDir, (exists) => {
+                    if (!exists) {
+                        FS.mkdir(tempDir, (err) => {
+                            if (err) {
+                                completed(err);
+                                return;
+                            }
 
-                let getRealPath = () => {
-                    FS.realpath(tempDir, (err, resolvedPath) => {
-                        if (err) {
-                            completed(err);
-                            return;
-                        }
-
-                        tempDir = resolvedPath;
-                        checkIfDirectory();
-                    });
-                }
-
-                let createNewList = () => {
-                    FS.exists(tempDir, (exists) => {
-                        if (!exists) {
-                            FS.mkdir(tempDir, (err) => {
-                                if (err) {
-                                    completed(err);
-                                    return;
-                                }
-
-                                getRealPath();
-                            });
-                        }
-                        else {
                             getRealPath();
-                        }
-                    });
-                }
-
-                if (!me._downloads) {
-                    createNewList();
-                }
-                else {
-                    completed();
-                }
+                        });
+                    }
+                    else {
+                        getRealPath();
+                    }
+                });
             }
-            catch (e) {
-                completed(e);
+
+            if (!me._downloads) {
+                createNewList();
             }
-        });
-    }
-
-    /* @inheritdoc */
-    public library<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.FileLibrary, T>> {
-        let me = this;
-        
-        return new Promise((resolve, reject) => {
-            let completed = (err?: any) => {
-                if (err) {
-                    reject(<dboy_contracts.ErrorContext<T>>{
-                        category: 'client.libary',
-                        error: err,
-                        tag: tag,
-                    });
-                }
-                else {
-                    resolve(<dboy_contracts.PromiseResult<dboy_contracts.FileLibrary, T>>{
-                        result: me._library,
-                        tag: tag,
-                    });
-                }
-            };
-
-            try {
-                if (!me._library) {
-                    me._library = new dboy_libraries.FileLibrary(me,
-                                                                 process.cwd());
-                }
-
+            else {
                 completed();
             }
-            catch (e) {
-                completed(e);
-            }
-        });
+        }
+        catch (e) {
+            completed(e);
+        }
     }
 
     /* @inheritdoc */
-    public start<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.Client, T>> {
+    public library(callback: (err?: any, lib?: dboy_contracts.FileLibrary) => void): void {
         let me = this;
+        
+        let completed = (err?: any) => {
+            if (err) {
+                callback(err);
+            }
+            else {
+                callback(null, me._library);
+            }
+        };
 
-        return new Promise((resolve, reject) => {
-            me._state = dboy_contracts.CLIENT_STATE_STARTING;
-            me.raisePropertyChanged('state');
+        try {
+            if (!me._library) {
+                me._library = new dboy_libraries.FileLibrary(me,
+                                                             process.cwd());
+            }
 
-            setTimeout(() => {
-                try {
-                    me._state = dboy_contracts.CLIENT_STATE_RUNNING;
-                    me.raisePropertyChanged('state');
+            completed();
+        }
+        catch (e) {
+            completed(e);
+        }
+    }
 
-                    resolve(<dboy_contracts.PromiseResult<dboy_contracts.Client, T>>{
-                        result: me,
-                        tag: tag,
-                    });
-                }
-                catch (e) {
-                    reject(<dboy_contracts.ErrorContext<T>>{
-                        category: 'client.start',
-                        code: 1,
-                        error: e,
-                        message: '' + e,
-                        object: me,
-                        tag: tag,
-                    });
-                }
-            }, 2000);
-        });
+    /* @inheritdoc */
+    public start(callback?: (err?: any) => void): void {
+        try {
+            this._state = dboy_contracts.CLIENT_STATE_STARTING;
+            this.raisePropertyChanged('state');
+
+            this._state = dboy_contracts.CLIENT_STATE_RUNNING;
+            this.raisePropertyChanged('state');
+
+            this.invokeCallback(callback);
+        }
+        catch (e) {
+            this.invokeCallback(callback, e);
+        }
     }
 
     /* @inheritdoc */
@@ -214,78 +177,43 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
     }
 
     /* @inheritdoc */
-    public stop<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.Client, T>> {
-        let me = this;
-        
-        return new Promise((resolve, reject) => {
-            me._state = dboy_contracts.CLIENT_STATE_STOPPING;
-            me.raisePropertyChanged('state');
+    public stop(callback?: (err?: any) => void): void {
+        try {
+            this._state = dboy_contracts.CLIENT_STATE_STOPPING;
+            this.raisePropertyChanged('state');
 
-            setTimeout(() => {
-                try {
-                    let dl = me._downloads;
-                    if (dl) {
+            this._state = dboy_contracts.CLIENT_STATE_STOPPED;
+            this.raisePropertyChanged('state');
 
-                    }
-
-                    me._state = dboy_contracts.CLIENT_STATE_STOPPED;
-                    me.raisePropertyChanged('state');
-
-                    resolve(<dboy_contracts.PromiseResult<dboy_contracts.Client, T>>{
-                        result: me,
-                        tag: tag,
-                    });
-                }
-                catch (e) {
-                    reject(<dboy_contracts.ErrorContext<T>>{
-                        category: 'client.stop',
-                        code: 1,
-                        error: e,
-                        message: '' + e,
-                        object: me,
-                        tag: tag,
-                    });
-                }
-            }, 2000);
-        });
+            this.invokeCallback(callback);
+        }
+        catch (e) {
+            this.invokeCallback(callback, e);
+        }
     }
 
     /* @inheritdoc */
-    public toggle<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.Client, T>> {
-        let me = this;
-
-        return new Promise((resolve, reject) => {
-            let rejectWrapper = (err: dboy_contracts.ErrorContext<T>) => {
-                err.category = 'client.toggle';
-                err.object = me;
-                err.tag = tag;
-
-                reject(err);
-            };
-
-            let currentState = me.state;
+    public toggle(callback?: (err?: any) => void): void {
+        try {
+            let currentState = this.state;
             switch (currentState) {
                 case dboy_contracts.CLIENT_STATE_RUNNING:
-                    me.stop(tag)
-                      .then(resolve, rejectWrapper);
+                    this.stop(callback);
                     break;
 
                 case dboy_contracts.CLIENT_STATE_STOPPED:
-                    me.start(tag)
-                      .then(resolve, rejectWrapper);
+                    this.start(callback);
                     break;
 
                 default:
-                    let err = new Error(`Cannot toggle client state from ${currentState}!`);
-
-                    rejectWrapper(<dboy_contracts.ErrorContext<T>>{
-                        code: 1,
-                        error: err,
-                        message: '' + err,
-                    });
+                    this.invokeCallback(callback,
+                                        new Error(`Cannot toggle client state from ${currentState}!`));
                     break;
             }
-        });
+        }
+        catch (e) {
+            this.invokeCallback(callback, e);
+        }
     }
 
     /**
@@ -328,59 +256,30 @@ export class Client extends dboy_objects.CommonEventObjectBase implements dboy_c
     }
 
     /* @inheritdoc */
-    public whenRunningOrStopped<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.Client, T>> {
-        let me = this;
-        
-        return new Promise((resolve, reject) => {
-            let rejectWrapper = (err: dboy_contracts.ErrorContext<T>) => {
-                err.category = 'client.whenrunningorstopped';
-                err.object = me;
+    public whenRunningOrStopped(callback: (err?: any) => void): void {
+        try {
+            let currentState = this.state;
+            switch (currentState) {
+                case dboy_contracts.CLIENT_STATE_RUNNING:
+                case dboy_contracts.CLIENT_STATE_STOPPED:
+                    this.invokeCallback(callback);
+                    break;
 
-                reject(err);
-            };
+                case dboy_contracts.CLIENT_STATE_STARTING:
+                case dboy_contracts.CLIENT_STATE_STOPPING:
+                    this.whenRunningOrStopped(callback);
+                    break;
 
-            try {
-                let currentState = me.state;
-                switch (currentState) {
-                    case dboy_contracts.CLIENT_STATE_RUNNING:
-                    case dboy_contracts.CLIENT_STATE_STOPPED:
-                        resolve(<dboy_contracts.PromiseResult<dboy_contracts.Client, T>>{
-                            result: me,
-                            tag: tag,
-                        });
-                        break;
-
-                    case dboy_contracts.CLIENT_STATE_STARTING:
-                    case dboy_contracts.CLIENT_STATE_STOPPING:
-                        me.whenRunningOrStopped()
-                          .then((result) => {
-                                    resolve(result);
-                                },
-                                (err) => {
-                                    reject(err);
-                                });
-                        break;
-
-                    default:
-                        let err = new Error('Client is in unknown state: ' + currentState);
-
-                        rejectWrapper(<dboy_contracts.ErrorContext<T>>{
-                            code: 2,
-                            error: err,
-                            message: '' + err,
-                            tag: tag,
-                        });
-                        break;
-                }
+                default:
+                    this.invokeCallback(callback,
+                                        new Error('Client is in invalid state: ' + currentState));
+                    break;
             }
-            catch (e) {
-                rejectWrapper(<dboy_contracts.ErrorContext<T>>{
-                    code: 1,
-                    error: e,
-                    message: '' + e,
-                    tag: tag,
-                });
-            }
-        });
+
+            this.invokeCallback(callback);
+        }
+        catch (e) {
+            this.invokeCallback(callback, e);
+        }
     }
 }

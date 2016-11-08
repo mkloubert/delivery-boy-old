@@ -60,104 +60,95 @@ export class FileLibrary extends dboy_objects.CommonEventObjectBase implements d
     }
 
     /* @inheritdoc */
-    public collections<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.FileLibraryCollection[], T>> {
+    public collections(callback: (err?: any, items?: dboy_contracts.FileLibraryCollection[]) => void): void {
         let me = this;
 
-        return new Promise((resolve, reject) => {
-            let completed = (err?: any) => {
-                if (err) {
-                    reject(<dboy_contracts.ErrorContext<T>>{
-                        category: 'filelibrary.collections',
-                        error: err,
-                        tag: tag,
-                    });
-                }
-                else {
-                    let copyOfCollections = me._collections.map(x => x);
+        let completed = (err?: any) => {
+            if (err) {
+                callback(err);
+            }
+            else {
+                let copyOfCollections = me._collections.map(x => x);
 
-                    resolve(<dboy_contracts.PromiseResult<dboy_contracts.FileLibraryCollection[], T>>{
-                        result: copyOfCollections,
-                        tag: tag,
-                    });
-                }
-            };
+                callback(null, copyOfCollections);
+            }
+        };
 
-            try {
-                if (!me._collections) {
-                    let processNextFolder: () => void;
+        try {
+            if (!me._collections) {
+                let processNextFolder: () => void;
 
-                    let foldersLeft = me.client.config.folders.shares.map(x => x);
-                    let collections: FileLibraryCollection[] = [];
+                let foldersLeft = me.client.config.folders.shares.map(x => x);
+                let collections: FileLibraryCollection[] = [];
 
-                    processNextFolder = () => {
-                        if (foldersLeft.length < 1) {
-                            me._collections = collections;
-                            completed();
+                processNextFolder = () => {
+                    if (foldersLeft.length < 1) {
+                        me._collections = collections;
+                        completed();
 
-                            return;
-                        }
+                        return;
+                    }
 
-                        let folderPath = foldersLeft.pop();
-                        if (!Path.isAbsolute(folderPath)) {
-                            folderPath = Path.join(me._WORK_DIR, folderPath);
-                        }
+                    let folderPath = foldersLeft.pop();
+                    if (!Path.isAbsolute(folderPath)) {
+                        folderPath = Path.join(me._WORK_DIR, folderPath);
+                    }
 
-                        let addIfDirectory = () => {
-                            FS.lstat(folderPath, (err, stats) => {
-                                if (!err) {
-                                    if (stats.isDirectory()) {
-                                        collections.push(new FileLibraryCollection(me, folderPath));
-                                    }
+                    let addIfDirectory = () => {
+                        FS.lstat(folderPath, (err, stats) => {
+                            if (!err) {
+                                if (stats.isDirectory()) {
+                                    collections.push(new FileLibraryCollection(me, folderPath));
                                 }
+                            }
 
-                                processNextFolder();
-                            });
-                        };
-
-                        let getRealPath = () => {
-                            FS.realpath(folderPath, (err, resolvedPath) => {
-                                if (err) {
-                                    processNextFolder();
-                                }
-                                else {
-                                    folderPath = resolvedPath;
-
-                                    addIfDirectory();
-                                }
-                            });
-                        };
-
-                        let checkIfPathExists = () => {
-                            FS.exists(folderPath, (exists) => {
-                                if (exists) {
-                                    getRealPath();
-                                }
-                                else {
-                                    FS.mkdir(folderPath, (err) => {
-                                        if (err) {
-                                            processNextFolder();
-                                        }
-                                        else {
-                                            getRealPath();
-                                        }
-                                    });
-                                }
-                            });
-                        };
-
-                        checkIfPathExists();
+                            processNextFolder();
+                        });
                     };
 
-                    processNextFolder();
-                }
-                else {
-                    completed();
-                }
+                    let getRealPath = () => {
+                        FS.realpath(folderPath, (err, resolvedPath) => {
+                            if (err) {
+                                processNextFolder();
+                            }
+                            else {
+                                folderPath = resolvedPath;
+
+                                addIfDirectory();
+                            }
+                        });
+                    };
+
+                    let checkIfPathExists = () => {
+                        FS.exists(folderPath, (exists) => {
+                            if (exists) {
+                                getRealPath();
+                            }
+                            else {
+                                FS.mkdir(folderPath, (err) => {
+                                    if (err) {
+                                        processNextFolder();
+                                    }
+                                    else {
+                                        getRealPath();
+                                    }
+                                });
+                            }
+                        });
+                    };
+
+                    checkIfPathExists();
+                };
+
+                processNextFolder();
             }
-            catch (e) {
-                completed(e);
+            else {
+                completed();
             }
-        });
+        }
+        catch (e) {
+            completed(e);
+        }
     }
 }
 
@@ -200,71 +191,62 @@ export class FileLibraryCollection extends dboy_objects.CommonEventObjectBase im
     }
     
     /* @inheritdoc */
-    public items<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.FileLibraryCollectionItem[], T>> {
+    public items(callback: (err?: any, items?: dboy_contracts.FileLibraryCollectionItem[]) => void): void {
         let me = this;
         
-        return new Promise((resolve, reject) => {
-            let completed = (err?: any) => {
-                if (err) {
-                    reject(<dboy_contracts.ErrorContext<T>>{
-                        category: 'filelibrary.collections',
-                        error: err,
-                        tag: tag,
-                    });
-                }
-                else {
-                    let copyOfItems = me._items.map(x => x);
+        let completed = (err?: any) => {
+            if (err) {
+                callback(err);
+            }
+            else {
+                let copyOfItems = me._items.map(x => x);
 
-                    resolve(<dboy_contracts.PromiseResult<dboy_contracts.FileLibraryCollectionItem[], T>>{
-                        result: copyOfItems,
-                        tag: tag,
-                    });
-                }
-            };
+                callback(null, copyOfItems);
+            }
+        };
 
-            try {
-                if (!me._items) {
-                    me._items = [];
+        try {
+            if (!me._items) {
+                me._items = [];
 
-                    let scanDir: (dir?: string) => void;
-                    scanDir = function(dir?: string) {
-                        let isRoot = arguments.length < 1;
-                        if (isRoot) {
-                            dir = me._DIR;
+                let scanDir: (dir?: string) => void;
+                scanDir = function(dir?: string) {
+                    let isRoot = arguments.length < 1;
+                    if (isRoot) {
+                        dir = me._DIR;
+                    }
+
+                    FS.readdir(dir, (err, files) => {
+                        if (!err) {
+                            files.map(x => Path.join(dir, x)).forEach((x) => {
+                                try {
+                                    x = FS.realpathSync(x);
+                                    let stats = FS.lstatSync(x);
+
+                                    if (stats.isFile()) {
+                                        me._items
+                                            .push(new FileLibraryCollectionItem(me, x));
+                                    }
+                                }
+                                catch (e) {
+                                    // ignore
+                                }
+                            });
                         }
 
-                        FS.readdir(dir, (err, files) => {
-                            if (!err) {
-                                files.map(x => Path.join(dir, x)).forEach((x) => {
-                                    try {
-                                        x = FS.realpathSync(x);
-                                        let stats = FS.lstatSync(x);
+                        completed();
+                    });
+                };
 
-                                        if (stats.isFile()) {
-                                            me._items
-                                              .push(new FileLibraryCollectionItem(me, x));
-                                        }
-                                    }
-                                    catch (e) {
-                                        // ignore
-                                    }
-                                });
-                            }
-
-                            completed();
-                        });
-                    };
-
-                    scanDir();
-                }
-                else {
-                    completed();
-                }
+                scanDir();
             }
-            catch (e) {
-                completed(e);
+            else {
+                completed();
             }
-        });
+        }
+        catch (e) {
+            completed(e);
+        }
     }
 
     /* @inheritdoc */

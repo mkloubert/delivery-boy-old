@@ -67,57 +67,45 @@ export interface Client extends NotifyPropertyChanged {
     /**
      * Requests the download list.
      * 
-     * @param {T} [tag] An optional object / value for the invocation.
-     * 
-     * @return {PromiseLike<PromiseResult<DownloadList, T>>} The promise.
+     * @param {Function} [callback] The result callback.
      */
-    downloads<T>(tag?: T): PromiseLike<PromiseResult<DownloadList, T>>;
+    downloads(callback: (err?: any, list?: DownloadList) => void): void;
 
     /**
      * Requests the file list.
      * 
-     * @param {T} [tag] An optional object / value for the invocation.
-     * 
-     * @return {PromiseLike<PromiseResult<FileLibrary, T>>} The promise.
+     * @param {Function} [callback] The result callback.
      */
-    library<T>(tag?: T): PromiseLike<PromiseResult<FileLibrary, T>>;
+    library(callback: (err?: any, lib?: FileLibrary) => void): void;
 
     /**
      * Starts the client.
      * 
-     * @param {T} [tag] An optional object / value for the invocation.
-     * 
-     * @return {PromiseLike<PromiseResult<Client, T>>} The promise.
+     * @param {Function} [callback] The result callback.
      */
-    start<T>(tag?: T): PromiseLike<PromiseResult<Client, T>>;
+    start(callback?: (err?: any) => void): void;
 
     /**
      * Stops the client.
      * 
-     * @param {T} [tag] An optional object / value for the invocation.
-     * 
-     * @return {PromiseLike<PromiseResult<Client, T>>} The promise.
+     * @param {Function} [callback] The result callback.
      */
-    stop<T>(tag?: T): PromiseLike<PromiseResult<Client, T>>;
+    stop(callback?: (err?: any) => void): void;
 
     /**
      * Toggles the state of the client.
      * 
-     * @param {T} [tag] An optional object / value for the invocation.
-     * 
-     * @return {PromiseLike<PromiseResult<Client, T>>} The promise.
+     * @param {Function} [callback] The result callback.
      */
-    toggle<T>(tag?: T): PromiseLike<PromiseResult<Client, T>>;
+    toggle(callback?: (err?: any) => void): void;
 
     /**
      * Invokes a logic for the case when the client reached 'running' or 'stopped'
      * state.
      * 
-     * @param {T} [tag] An optional object / value for the invocation.
-     * 
-     * @return {PromiseLike<PromiseResult<Client, T>>} The promise.
+     * @param {Function} [callback] The result callback.
      */
-    whenRunningOrStopped<T>(tag?: T): PromiseLike<PromiseResult<Client, T>>;
+    whenRunningOrStopped(callback: (err?: any) => void): void;
 
     /**
      * Gets the current client state.
@@ -160,13 +148,11 @@ export interface ClientObject {
  */
 export interface Disposable {
     /**
-     * Disposed the object.
+     * Disposes the object.
      * 
-     * @param {T} [tag] An optional object / value for the invocation.
-     * 
-     * @return {PromiseLike<PromiseResult<Disposable, T>>} The promise.
+     * @param {Function} [callback] The result callback.
      */
-    dispose<T>(tag?: T): PromiseLike<PromiseResult<Disposable, T>>;
+    dispose(callback?: (err?: any) => void): void;
 
     /**
      * Gets if the object has already bee disposed or not.
@@ -212,20 +198,17 @@ export interface DownloadList extends ClientObject, Disposable {
      * Adds a new download by link.
      * 
      * @param {string} link The link.
-     * @param {T} [tag] An optional object / value for the invocation.
-     * 
-     * @return {PromiseLike<PromiseResult<DownloadItem[], T>>} The promise.
+     * @param {Function} [callback] The result callback.
      */
-    addByLink<T>(link: string, tag?: T): PromiseLike<PromiseResult<DownloadItem, T>>;
+    addByLink(link: string,
+              callback?: (err?: any, newItem?: DownloadItem) => void): void;
 
     /**
      * Gets the list of download items.
      * 
-     * @param {T} [tag] An optional object / value for the invocation.
-     * 
-     * @return {PromiseLike<PromiseResult<DownloadItem[], T>>} The promise.
+     * @param {Function} callback The result callback.
      */
-    items<T>(tag?: T): PromiseLike<PromiseResult<DownloadItem[], T>>;
+    items(callback: (err?: any, newItem?: DownloadItem[]) => void): void;
 }
 
 /**
@@ -241,41 +224,6 @@ export interface DownloadInitializedEventArguments extends EventArguments {
      * The list (if succeeded).
      */
     list?: DownloadList;
-}
-
-/**
- * Descibes an error context.
- */
-export interface ErrorContext<T> {
-    /**
-     * The category.
-     */
-    category?: string;
-
-    /**
-     * The error code.
-     */
-    code?: number;
-
-    /**
-     * The error object.
-     */
-    error: any;
-
-    /**
-     * The underlying object.
-     */
-    object?: any;
-
-    /**
-     * The message.
-     */
-    message?: string;
-
-    /**
-     * The tag object.
-     */
-    tag?: T;
 }
 
 /**
@@ -316,11 +264,9 @@ export interface FileLibrary extends ClientObject {
     /**
      * Requests all collections of that library.
      * 
-     * @param {T} [tag] An optional object / value for the invocation.
-     * 
-     * @return {PromiseLike<PromiseResult<FileLibraryCollection[], T>>} The promise.
+     * @param {Function} callback The result callback.
      */
-    collections<T>(tag?: T): PromiseLike<PromiseResult<FileLibraryCollection[], T>>;
+    collections(callback: (err?: any, items?: FileLibraryCollection[]) => void): void;
 }
 
 /**
@@ -330,11 +276,9 @@ export interface FileLibraryCollection {
     /**
      * Requests all items of that collection.
      * 
-     * @param {T} [tag] An optional object / value for the invocation.
-     * 
-     * @return {PromiseLike<PromiseResult<FileLibraryCollectionItem[], T>>} The promise.
+     * @param {Function} callback The result callback.
      */
-    items<T>(tag?: T): PromiseLike<PromiseResult<FileLibraryCollectionItem[], T>>;
+    items(callback: (err?: any, items?: FileLibraryCollectionItem[]) => void): void;
 
     /**
      * Gets the underlying library.
@@ -369,26 +313,6 @@ export interface NotifyPropertyChanged extends EventObject {
      * @chainable
      */
     onPropertyChanged(handler: PropertyChangedEventHandler): NotifyPropertyChanged;
-}
-
-/**
- * Describes a promise result.
- */
-export interface PromiseResult<TResult, TTag> {
-    /**
-     * A code that describes the result.
-     */
-    code?: number;
-
-    /**
-     * The result object.
-     */
-    result: TResult;
-
-    /**
-     * The optional submitted object.
-     */
-    tag?: TTag;
 }
 
 /**

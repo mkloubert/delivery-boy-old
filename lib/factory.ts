@@ -24,7 +24,9 @@ declare const Promise: PromiseConstructorLike;
 
 /**
  * Creates a new client instance.
+ * 
+ * @param {dboy_contracts.ClientConfig} [cfg] The configuration for the client.
  */
-export function createClient<T>(cfg?: dboy_contracts.ClientConfig, tag?: T): dboy_contracts.Client {
+export function createClient(cfg?: dboy_contracts.ClientConfig): dboy_contracts.Client {
     return new dboy_client.Client(cfg);
 }

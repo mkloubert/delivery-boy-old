@@ -45,163 +45,153 @@ export class DownloadList extends dboy_objects.CommonEventObjectBase implements 
     }
 
     /* @inheritdoc */
-    public addByLink<T>(link: string, tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.DownloadItem, T>> {
-        let me = this;
+    public addByLink(link: string,
+                     callback?: (err?: any, newItem?: dboy_contracts.DownloadItem) => void): void {
         
-        return new Promise((resolve, reject) => {
-            let newItem: dboy_contracts.DownloadItem;
-            let completed = (err?: any) => {
-                if (err) {
-                    reject(<dboy_contracts.ErrorContext<T>>{
-                        category: 'downloadlist.addbylink',
-                        code: 1,
-                        error: err,
-                        message: '' + err,
-                        object: me,
-                        tag: tag,
-                    });
+        let me = this;
+
+        let newItem: dboy_contracts.DownloadItem;
+        let completed = (err?: any) => {
+            if (err) {
+                callback(err);
+            }
+            else {
+                callback(null, newItem);
+            }
+        };
+        
+        try {
+            link = ('' + link).trim();
+
+            let REGEX = /^(dboy:\/\/)(\s*)(\|)(\s*)(file)(\s*)(\|)([^\|]+)(\|)(\s*)([0-9]+)(\s*)(\|)(\s*)([0-9a-f]{64})(\s*)(\|)(\s*)(\/?)$/i;
+            if (REGEX.test(link)) {
+                let match = REGEX.exec(link);
+
+                let fileName = match[8];
+                if (fileName) {
+                    fileName = decodeURIComponent(('' + match[8]).trim());
                 }
-                else {
-                    resolve(<dboy_contracts.PromiseResult<dboy_contracts.DownloadItem, T>>{
-                        result: newItem,
-                        tag: tag,
-                    });
+
+                if (!fileName) {
+                    fileName = 'file.dat';
                 }
-            };
-            
-            try {
-                link = ('' + link).trim();
 
-                let REGEX = /^(dboy:\/\/)(\s*)(\|)(\s*)(file)(\s*)(\|)([^\|]+)(\|)(\s*)([0-9]+)(\s*)(\|)(\s*)([0-9a-f]{64})(\s*)(\|)(\s*)(\/?)$/i;
-                if (REGEX.test(link)) {
-                    let match = REGEX.exec(link);
+                let hash = match[15].toLowerCase().trim();
+                let fileSize = parseInt(match[11].trim());
 
-                    let fileName = match[8];
-                    if (fileName) {
-                        fileName = decodeURIComponent(('' + match[8]).trim());
-                    }
+                let tempFile = Path.join(me._DIR, `${hash}_${fileSize}.dbtmp`);
+                let metaFile = Path.join(me._DIR, `${hash}_${fileSize}.dbmeta`);
 
-                    if (!fileName) {
-                        fileName = 'file.dat';
-                    }
-
-                    let hash = match[15].toLowerCase().trim();
-                    let fileSize = parseInt(match[11].trim());
-
-                    let tempFile = Path.join(me._DIR, `${hash}_${fileSize}.dbtmp`);
-                    let metaFile = Path.join(me._DIR, `${hash}_${fileSize}.dbmeta`);
-
-                    let closeFile = (fd: number, err?: any, next?: () => void) => {
-                        FS.close(fd, () => {
-                            if (err) {
-                                completed(err);
+                let closeFile = (fd: number, err?: any, next?: () => void) => {
+                    FS.close(fd, () => {
+                        if (err) {
+                            completed(err);
+                        }
+                        else {
+                            if (next) {
+                                next();
                             }
                             else {
-                                if (next) {
-                                    next();
-                                }
-                                else {
-                                    completed();
-                                }
+                                completed();
                             }
-                        });
-                    };
+                        }
+                    });
+                };
 
-                    let createNewMetaFile = () => {
-                        FS.open(metaFile, 'w', (err, fd) => {
-                            if (err) {
-                                completed(err);
-                                return;
-                            }
+                let createNewMetaFile = () => {
+                    FS.open(metaFile, 'w', (err, fd) => {
+                        if (err) {
+                            completed(err);
+                            return;
+                        }
 
-                            let meta = {
-                                name: fileName,
-                                chunks: new Array<any>(),
-                            };
+                        let meta = {
+                            name: fileName,
+                            chunks: new Array<any>(),
+                        };
 
-                            let partCount = Math.ceil(fileSize / 9728000.0);
-                            for (let i = 0; i < partCount; i++) {
-                                meta.chunks.push({
-                                    index: i,
-                                    completed: 0,
-                                });
-                            }
-
-                            FS.write(fd, JSON.stringify(meta, null, 2), 0, 'utf8', (err) => {
-                                if (!err) {
-                                    newItem = new DownloadItem(me,
-                                                               tempFile, metaFile);
-
-                                    me._items
-                                      .push(newItem);
-                                }
-
-                                closeFile(fd, err);
+                        let partCount = Math.ceil(fileSize / 9728000.0);
+                        for (let i = 0; i < partCount; i++) {
+                            meta.chunks.push({
+                                index: i,
+                                completed: 0,
                             });
-                        });
-                    };
+                        }
 
-                    let createNewTempFile = () => {
-                        FS.open(tempFile, 'w', (err, fd) => {
-                            if (err) {
-                                completed(err);
+                        FS.write(fd, JSON.stringify(meta, null, 2), 0, 'utf8', (err) => {
+                            if (!err) {
+                                newItem = new DownloadItem(me,
+                                                            tempFile, metaFile);
+
+                                me._items
+                                    .push(newItem);
+                            }
+
+                            closeFile(fd, err);
+                        });
+                    });
+                };
+
+                let createNewTempFile = () => {
+                    FS.open(tempFile, 'w', (err, fd) => {
+                        if (err) {
+                            completed(err);
+                            return;
+                        }
+
+                        let remainingBytes = fileSize;
+
+                        let writeNext: () => void;
+                        writeNext = () => {
+                            if (remainingBytes < 1) {
+                                closeFile(fd, null, createNewMetaFile);
                                 return;
                             }
 
-                            let remainingBytes = fileSize;
+                            let bytesToWrite = Math.min(81920, remainingBytes);
+                            let buffer = Buffer.alloc(bytesToWrite, 0);
 
-                            let writeNext: () => void;
-                            writeNext = () => {
-                                if (remainingBytes < 1) {
-                                    closeFile(fd, null, createNewMetaFile);
+                            FS.write(fd, buffer, 0, buffer.length, (err, written) => {
+                                if (err) {
+                                    closeFile(fd, err);
                                     return;
                                 }
 
-                                let bytesToWrite = Math.min(81920, remainingBytes);
-                                let buffer = Buffer.alloc(bytesToWrite, 0);
+                                remainingBytes -= written;
+                                writeNext();
+                            });
+                        };
 
-                                FS.write(fd, buffer, 0, buffer.length, (err, written) => {
-                                    if (err) {
-                                        closeFile(fd, err);
-                                        return;
-                                    }
+                        writeNext();
+                    });
+                };
 
-                                    remainingBytes -= written;
-                                    writeNext();
-                                });
-                            };
-
-                            writeNext();
-                        });
-                    };
-
-                    let checkIfFileExists = () => {
-                        for (let i = 0; me._items.length; i++) {
-                            let item = <DownloadItem>me._items[i];
-                            if (tempFile == item.tempFile) {
-                                newItem = item;
-                                completed();
-                                break;
-                            }
+                let checkIfFileExists = () => {
+                    for (let i = 0; me._items.length; i++) {
+                        let item = <DownloadItem>me._items[i];
+                        if (tempFile == item.tempFile) {
+                            newItem = item;
+                            completed();
+                            break;
                         }
-                        
-                        if (!newItem) {
-                            createNewTempFile();
-                        }
-                    };
+                    }
+                    
+                    if (!newItem) {
+                        createNewTempFile();
+                    }
+                };
 
-                    checkIfFileExists();
-                }
-                else {
-                    let err = new Error('Invalid link format!');
+                checkIfFileExists();
+            }
+            else {
+                let err = new Error('Invalid link format!');
 
-                    completed(err);
-                }
+                completed(err);
             }
-            catch (e) {
-                completed(e);
-            }
-        });
+        }
+        catch (e) {
+            completed(e);
+        }
     }
 
     /* @inheritdoc */
@@ -210,83 +200,67 @@ export class DownloadList extends dboy_objects.CommonEventObjectBase implements 
     }
 
     /* @inheritdoc */
-    protected disposing<T>(resolve: () => void, reject: (reason: any) => void,
-                           tag: T,
-                           disposing: boolean) {
+    protected disposing(resolve: () => void, reject: (reason: any) => void,
+                        disposing: boolean) {
     }
 
     /* @inheritdoc */
-    public items<T>(tag?: T): PromiseLike<dboy_contracts.PromiseResult<dboy_contracts.DownloadItem[], T>> {
+    public items(callback: (err?: any, newItem?: dboy_contracts.DownloadItem[]) => void): void {
         let me = this;
-        
-        return new Promise((resolve, reject) => {
-            let completed = (err?: any) => {
-                if (err) {
-                    reject(<dboy_contracts.ErrorContext<T>>{
-                        category: 'downloadlist.items',
-                        code: 1,
-                        error: err,
-                        message: '' + err,
-                        object: me,
-                        tag: tag,
-                    });
-                }
-                else {
-                    let copyOfItems: dboy_contracts.DownloadItem[] = [];
-                    for (let i = 0; i < me._items.length; i++) {
-                        copyOfItems.push(me._items[i]);
+
+        let completed = (err?: any) => {
+            if (err) {
+                callback(err);
+            }
+            else {
+                let copyOfItems = me._items.map(x => x);
+
+                callback(null, copyOfItems);
+            }
+        };
+
+        try {
+            let REGEX = /^([0-9|a-f]{64})(_)([0-9]+)(\.)(dbtmp)$/i;
+
+            if (!me._items) {
+                FS.readdir(me._DIR, (err, files) => {
+                    if (err) {
+                        completed(err);
+                        return;
                     }
 
-                    resolve(<dboy_contracts.PromiseResult<dboy_contracts.DownloadItem[], T>>{
-                        result: copyOfItems,
-                        tag: tag,
-                    });
-                }
-            };
+                    me._items = [];
 
-            try {
-                let REGEX = /^([0-9|a-f]{64})(_)([0-9]+)(\.)(dbtmp)$/i;
+                    let tempFiles = files.filter(x => REGEX.test(x));
+                    for (let i = 0; i < tempFiles.length; i++) {
+                        try {
+                            let fileName = tempFiles[i];
+                            let match = REGEX.exec(fileName);
 
-                if (!me._items) {
-                    FS.readdir(me._DIR, (err, files) => {
-                        if (err) {
-                            completed(err);
-                            return;
-                        }
-
-                        me._items = [];
-
-                        let tempFiles = files.filter(x => REGEX.test(x));
-                        for (let i = 0; i < tempFiles.length; i++) {
-                            try {
-                                let fileName = tempFiles[i];
-                                let match = REGEX.exec(fileName);
-
-                                let metaFile = Path.join(me._DIR, match[1] + match[2] + match[3] + '.dbmeta');
-                                if (FS.existsSync(metaFile)) {
-                                    let newItem = new DownloadItem(me, 
-                                                                   Path.join(me._DIR, __filename), metaFile);
-                                    
-                                    me._items
-                                      .push(newItem);
-                                }
-                            }
-                            catch (e) {
-                                // ignore
+                            let metaFile = Path.join(me._DIR, match[1] + match[2] + match[3] + '.dbmeta');
+                            if (FS.existsSync(metaFile)) {
+                                let newItem = new DownloadItem(me, 
+                                                                Path.join(me._DIR, __filename), metaFile);
+                                
+                                me._items
+                                    .push(newItem);
                             }
                         }
+                        catch (e) {
+                            // ignore
+                        }
+                    }
 
-                        completed();
-                    });
-                }
-                else {
                     completed();
-                }
+                });
             }
-            catch (e) {
-                completed(e);
+            else {
+                completed();
             }
-        });
+        }
+        catch (e) {
+            completed(e);
+        }
     }
 }
 
