@@ -15,8 +15,9 @@
     "boy",
     "music",
     "media",
+    "file",
     "files",
-    "share",
+    "sharing",
     "rsa",
     "aes256",
     "encrypted",
@@ -30,9 +31,11 @@
   "homepage": "https://github.com/mkloubert/delivery-boy#readme",
   "readmeFilename": "README.md",
   "devDependencies": {
+    "@types/file-type": "0.0.1",
     "@types/node": "^6.0.46"
   },
   "dependencies": {
+    "file-type": "^4.1.0",
     "node-simple-socket": "^2.2.2"
   }
 }
