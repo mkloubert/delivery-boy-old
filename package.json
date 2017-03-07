@@ -1,21 +1,34 @@
 {
   "name": "delivery-boy",
   "version": "0.0.1",
-  "description": "Secure music file sharing application",
+  "description": "Library that shares media files secure and crypted.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": "https://github.com/mkloubert/delivery-boy",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mkloubert/delivery-boy.git"
+  },
   "keywords": [
     "delivery",
     "boy",
     "music",
-    "file",
-    "share"
+    "media",
+    "files",
+    "share",
+    "rsa",
+    "aes256",
+    "encrypted",
+    "secure"
   ],
   "author": "mkloubert",
   "license": "GPL3",
+  "bugs": {
+    "url": "https://github.com/mkloubert/delivery-boy/issues"
+  },
+  "homepage": "https://github.com/mkloubert/delivery-boy#readme",
+  "readmeFilename": "README.md",
   "devDependencies": {
     "@types/node": "^6.0.46"
   },
