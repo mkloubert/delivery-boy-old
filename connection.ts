@@ -172,17 +172,22 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
                 };
 
                 createRandomBuffer().then((randBuff) => {
-                    let dataToSend = Buffer.concat([
-                        randBuff,
-                        new Buffer(JSON.stringify(helloMsg), 'utf8'),
-                    ]);
+                    try {
+                        let dataToSend = Buffer.concat([
+                            randBuff,
+                            new Buffer(JSON.stringify(helloMsg), 'utf8'),
+                        ]);
 
-                    me.socket.write(dataToSend).then((sendData) => {
-                        completed(null,
-                                  sendData && sendData.length === dataToSend.length);
-                    }, (err) => {
-                        completed(err);
-                    });
+                        me.socket.write(dataToSend).then((sendData) => {
+                            completed(null,
+                                    sendData && sendData.length === dataToSend.length);
+                        }, (err) => {
+                            completed(err);
+                        });
+                    }
+                    catch (e) {
+                        completed(e);
+                    }
                 }, (err) => {
                     completed(err);
                 });                    
