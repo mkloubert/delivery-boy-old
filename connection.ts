@@ -339,6 +339,11 @@ function createRandomBuffer(): PromiseLike<Buffer> {
     buff.writeUInt8(length, 0);
 
     return new Promise<Buffer>((resolve, reject) => {
+        if (length < 1) {
+            resolve(buff);
+            return;
+        }
+
         crypto.randomBytes(length, (err, randBuff) => {
             try {
                 if (err) {
