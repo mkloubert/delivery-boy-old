@@ -27,7 +27,7 @@ import * as simpleSocketHelpers from 'node-simple-socket/helpers';
 /**
  * The default TCP port.
  */
-export const DEFAULT_PORT = 221286;
+export const DEFAULT_PORT = 14379;
 
 
 /**
@@ -76,20 +76,28 @@ export class DeliveryBoy extends events.EventEmitter implements db_contracts.ICl
 
                                     me.emit('connect.connected',
                                             conn);
+
+                                    completed(null, conn);
                                 }
                                 else {
                                     // not accepted
                                     newConnection.end().then(() => {
                                         me.emit('connect.reject',
                                                 null, newConnection);
+
+                                        completed(null, null);
                                     }, (err) => {
                                         me.emit('connect.reject',
                                                 err, newConnection);
+
+                                        completed(err, null);
                                     });
                                 }
                             }
                             catch (e) {
                                 me.emit('error.listen', e, 3);
+
+                                completed(e);
                             }
                         };
 
@@ -97,6 +105,8 @@ export class DeliveryBoy extends events.EventEmitter implements db_contracts.ICl
                             emitEvent(connectionAccepted);
                         }, (err) => {
                             me.emit('error.connect', err, 1);
+
+                            completed(err);
                         });
                     }
                     catch (e) {

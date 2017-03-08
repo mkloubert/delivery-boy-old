@@ -198,11 +198,7 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
         });
     }
 
-    /**
-     * Reads a message.
-     * 
-     * @return {PromiseLike<TMsg>} The promise.
-     */
+    /** @inheritdoc */
     public readMessage<TMsg extends db_messages.IMessage>(): PromiseLike<TMsg> {
         let me = this;
         
@@ -241,12 +237,6 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
                         }, (err) => {
                             completed(err);
                         });
-
-                        me.socket.readJSON<TMsg>().then((msg) => {
-                            completed(null, msg);
-                        }, (err) => {
-                            completed(err);
-                        });
                     }
                 }, (err) => {
                     completed(err);
@@ -258,13 +248,7 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
         });
     }
 
-    /**
-     * Sends a message.
-     * 
-     * @param {TMsg} msg The message to send.
-     * 
-     * @return {PromiseLike<Buffer>} The promise.
-     */
+    /** @inheritdoc */
     public sendMessage<TMsg extends db_messages.IMessage>(msg: TMsg): PromiseLike<Buffer> {
         let me = this;
 
@@ -377,15 +361,9 @@ function extractRandomBuffer(buff: Buffer): Buffer {
     if (buff) {
         let length = buff.readUInt8(0);
 
-        if (length > 0) {
-            realBuffer = Buffer.alloc(length);
-
-            buff.copy(realBuffer, 0,
-                      1 + length);
-        }
-        else {
-            realBuffer = Buffer.alloc(0);
-        }
+        realBuffer = Buffer.alloc(buff.length - length - 1);
+        buff.copy(realBuffer, 0,
+                  1 + length);
     }
 
     return realBuffer;

@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import * as db_messages from './messages';
 import * as simpleSocket from 'node-simple-socket';
 
 
@@ -63,6 +64,20 @@ export interface IConnection extends NodeJS.EventEmitter {
      * Gets the client.
      */
     readonly client: IClient;
+    /**
+     * Reads a message.
+     * 
+     * @return {PromiseLike<TMsg>} The promise.
+     */
+    readMessage<TMsg extends db_messages.IMessage>(): PromiseLike<TMsg>;
+    /**
+     * Sends a message.
+     * 
+     * @param {TMsg} msg The message to send.
+     * 
+     * @return {PromiseLike<Buffer>} The promise.
+     */
+    sendMessage<TMsg extends db_messages.IMessage>(msg: TMsg): PromiseLike<Buffer>;
     /**
      * Gets the socket.
      */
