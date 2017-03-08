@@ -180,7 +180,7 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
 
                         me.socket.write(dataToSend).then((sendData) => {
                             completed(null,
-                                    sendData && sendData.length === dataToSend.length);
+                                      sendData && sendData.length === dataToSend.length);
                         }, (err) => {
                             completed(err);
                         });
