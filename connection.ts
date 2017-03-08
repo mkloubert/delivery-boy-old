@@ -113,7 +113,7 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
                         me.makeServerHandshake().then((handshakeMade) => {
                             me._handskakeMade = handshakeMade;
 
-                            resolve(me._handskakeMade ? true : null);
+                            resolve(handshakeMade ? true : null);
                         }, (err) => {
                             reject(err);
                         });
@@ -124,7 +124,7 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
                         me.makeClientHandshake().then((handshakeMade) => {
                             me._handskakeMade = handshakeMade;
 
-                            resolve(me._handskakeMade ? true : null);
+                            resolve(handshakeMade ? true : null);
                         }, (err) => {
                             reject(err);
                         });
