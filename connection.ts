@@ -114,7 +114,7 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
     protected makeHandskakeIfNeeded(): PromiseLike<boolean | null> {
         let me = this;
 
-        return new Promise<boolean>((resolve, reject) => {
+        return new Promise<boolean | null>((resolve, reject) => {
             if (me._handskakeMade) {
                 resolve(false);
             }
