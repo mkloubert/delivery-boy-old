@@ -36,6 +36,6 @@
   },
   "dependencies": {
     "file-type": "^4.1.0",
-    "node-simple-socket": "^2.2.2"
+    "node-simple-socket": "^2.3.1"
   }
 }

@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import * as crypto from 'crypto';
 import * as db_contracts from './contracts';
 import * as db_messages from './messages';
 import * as events from 'events';
@@ -78,9 +79,23 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
             let completed = simpleSocketHelpers.createSimplePromiseCompletedAction(resolve, reject);
 
             try {
-                me.socket.readJSON<db_messages.IHelloMessage>().then((msg) => {
-                    completed(null,
-                              msg && 2 === msg.type);
+                me.socket.read().then((data) => {
+                    try {
+                        data = extractRandomBuffer(data);
+
+                        if (data) {
+                            let msg: db_messages.IHelloMessage = JSON.parse(data.toString('utf8'));
+
+                            completed(null,
+                                      msg && 2 === msg.type);
+                        }
+                        else {
+                            completed(null, false);
+                        }
+                    }
+                    catch (e) {
+                        completed(e);
+                    }
                 }, (err) => {
                     completed(err);
                 });
@@ -152,14 +167,25 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
             let completed = simpleSocketHelpers.createSimplePromiseCompletedAction(resolve, reject);
 
             try {
-                me.socket.writeJSON<db_messages.IHelloMessage>({
+                let helloMsg: db_messages.IHelloMessage = {
                     type: 2,
-                }).then((dataSend) => {
-                    completed(null,
-                              dataSend && dataSend.length > 0);
+                };
+
+                createRandomBuffer().then((randBuff) => {
+                    let dataToSend = Buffer.concat([
+                        randBuff,
+                        new Buffer(JSON.stringify(helloMsg), 'utf8'),
+                    ]);
+
+                    me.socket.write(dataToSend).then((sendData) => {
+                        completed(null,
+                                  sendData && sendData.length === dataToSend.length);
+                    }, (err) => {
+                        completed(err);
+                    });
                 }, (err) => {
                     completed(err);
-                });
+                });                    
             }
             catch (e) {
                 completed(e);
@@ -193,6 +219,24 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
                         });
                     }
                     else {
+                        me.socket.read().then((data) => {
+                            try {
+                                data = extractRandomBuffer(data);
+                                if (data) {
+                                    completed(null,
+                                              JSON.parse(data.toString('utf8')));
+                                }
+                                else {
+                                    completed(null, <any>data);
+                                }
+                            }
+                            catch (e) {
+                                completed(e);
+                            }
+                        }, (err) => {
+                            completed(err);
+                        });
+
                         me.socket.readJSON<TMsg>().then((msg) => {
                             completed(null, msg);
                         }, (err) => {
@@ -229,24 +273,38 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
                 }
 
                 me.makeHandskakeIfNeeded().then((handshakeMade) => {
-                    if (null === handshakeMade) {
-                        let tellForNoHandshake = () => {
-                            completed(new Error('Handshake failed!'));
-                        };
+                    try {
+                        if (null === handshakeMade) {
+                            let tellForNoHandshake = () => {
+                                completed(new Error('Handshake failed!'));
+                            };
 
-                        // no handshake => no connection
-                        me.socket.end().then(() => {
-                            tellForNoHandshake();
-                        }, (err) => {
-                            tellForNoHandshake();
-                        });
+                            // no handshake => no connection
+                            me.socket.end().then(() => {
+                                tellForNoHandshake();
+                            }, (err) => {
+                                tellForNoHandshake();
+                            });
+                        }
+                        else {
+                            createRandomBuffer().then((randBuff) => {
+                                let dataToSend = Buffer.concat([
+                                    randBuff,
+                                    new Buffer(JSON.stringify(msg), 'utf8'),
+                                ]);
+
+                                me.socket.write(dataToSend).then((buffer) => {
+                                    completed(null, buffer);
+                                }, (err) => {
+                                    completed(err);
+                                });
+                            }, (err) => {
+                                completed(err);
+                            });
+                        }
                     }
-                    else {
-                        me.socket.writeJSON(msg).then((buffer) => {
-                            completed(null, buffer);
-                        }, (err) => {
-                            completed(err);
-                        });
+                    catch (e) {
+                        completed(e);
                     }
                 });
             }
@@ -265,4 +323,55 @@ export class Connection extends events.EventEmitter implements db_contracts.ICon
     public get type(): db_contracts.ConnectionType {
         return this._type;
     }
+}
+
+
+function createRandomBuffer(): PromiseLike<Buffer> {
+    let length = Math.floor(Math.random() * 256);
+    if (length < 1) {
+        length = 0;
+    }
+    else if (length > 255) {
+        length = 255;
+    }
+
+    let buff = Buffer.alloc(1 + length);
+    buff.writeUInt8(length, 0);
+
+    return new Promise<Buffer>((resolve, reject) => {
+        crypto.randomBytes(length, (err, randBuff) => {
+            try {
+                if (err) {
+                    reject(err);
+                }
+                else {
+                    randBuff.copy(buff, 1);
+
+                    resolve(buff);
+                }
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    });
+}
+
+function extractRandomBuffer(buff: Buffer): Buffer {
+    let realBuffer = buff;
+    if (buff) {
+        let length = buff.readUInt8(0);
+
+        if (length > 0) {
+            realBuffer = Buffer.alloc(length);
+
+            buff.copy(realBuffer, 0,
+                      1 + length);
+        }
+        else {
+            realBuffer = Buffer.alloc(0);
+        }
+    }
+
+    return realBuffer;
 }
