@@ -1,0 +1,6 @@
+/test/**/*
+/shares/**/*
+/temp/**/*
+**/*.ts
+**/*.map
+pushall.sh
